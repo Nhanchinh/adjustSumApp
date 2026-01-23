@@ -4,13 +4,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,128 +44,171 @@ fun HistoryScreen(
             .fillMaxSize()
             .clearFocusOnTap()
     ) {
-        // Top Bar with Actions
-        Surface(
-            tonalElevation = 3.dp,
-            modifier = Modifier.fillMaxWidth()
+        // Simple Top Section
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
+            Column {
+                if (state.historyItems.isNotEmpty()) {
                     Text(
-                        text = "Lịch sử",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "${state.historyItems.size} mục",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (state.historyItems.isNotEmpty()) {
-                        Text(
-                            text = "${state.historyItems.size} mục",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary
+                }
+                if (state.unsyncedCount > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CloudOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                         )
-                    } else if (!state.isLoading) {
                         Text(
-                            text = "Chưa có lịch sử",
+                            text = "${state.unsyncedCount} chưa đồng bộ",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                         )
                     }
-                    if (state.unsyncedCount > 0) {
-                        Text(
-                            text = "⚠️ ${state.unsyncedCount} chưa đồng bộ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                }
+            }
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Refresh button
+                IconButton(
+                    onClick = { viewModel.refreshHistory() },
+                    enabled = !state.isLoading,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            Icons.Default.Refresh,
+                            "Refresh",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
                 
-                Row {
-                    // Refresh button
-                    IconButton(
-                        onClick = { viewModel.refreshHistory() },
-                        enabled = !state.isLoading
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        } else {
-                            Icon(Icons.Default.Refresh, "Refresh")
-                        }
-                    }
-                    
-                    // Sync button
-                    IconButton(
-                        onClick = { viewModel.syncHistory() },
-                        enabled = !state.isSyncing && state.historyItems.isNotEmpty()
-                    ) {
-                        if (state.isSyncing) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        } else {
-                            Icon(Icons.Default.CloudSync, "Sync to Server")
-                        }
+                // Sync button
+                IconButton(
+                    onClick = { viewModel.syncHistory() },
+                    enabled = !state.isSyncing && state.historyItems.isNotEmpty(),
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    if (state.isSyncing) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            Icons.Default.CloudSync,
+                            "Sync",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
         }
         
-        // Search Bar
+        // Simple Search Bar
         OutlinedTextField(
             value = state.searchQuery,
             onValueChange = { viewModel.searchHistory(it) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            placeholder = { Text("Tìm kiếm...") },
-            leadingIcon = { Icon(Icons.Default.Search, "Search") },
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = { 
+                Text(
+                    "Tìm kiếm...",
+                    style = MaterialTheme.typography.bodyMedium
+                ) 
+            },
+            leadingIcon = { 
+                Icon(
+                    Icons.Default.Search,
+                    "Search",
+                    modifier = Modifier.size(20.dp)
+                ) 
+            },
             trailingIcon = {
                 if (state.searchQuery.isNotEmpty()) {
                     IconButton(onClick = { viewModel.searchHistory("") }) {
-                        Icon(Icons.Default.Clear, "Clear")
+                        Icon(
+                            Icons.Default.Clear,
+                            "Clear",
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             },
-            singleLine = true
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp)
         )
         
-        // Messages
+        // Simple Messages (Snackbar style)
         if (state.error != null) {
-            Card(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Text(
-                    text = state.error!!,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(12.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Error,
+                        null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = state.error!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
         
         if (state.successMessage != null) {
-            Card(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(8.dp)
             ) {
-                Text(
-                    text = state.successMessage!!,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(12.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = state.successMessage!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
         
         // History List
@@ -172,12 +218,12 @@ fun HistoryScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
+                    CircularProgressIndicator(strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Đang tải lịch sử...",
+                        "Đang tải...",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -193,38 +239,30 @@ fun HistoryScreen(
                     Icon(
                         Icons.Default.HistoryToggleOff,
                         contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Chưa có lịch sử nào",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        "Chưa có lịch sử",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Hãy thử tóm tắt một văn bản trong tab Chat AI!\nLịch sử sẽ được lưu tự động.",
+                        "Lịch sử tóm tắt sẽ được lưu tự động",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { viewModel.refreshHistory() }
-                    ) {
-                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Tải lại")
-                    }
                 }
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(state.historyItems, key = { it.id }) { item ->
                     HistoryItemCard(
@@ -268,47 +306,66 @@ private fun HistoryItemCard(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Transparent
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
         ) {
+            // Header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AssistChip(
-                    onClick = {},
-                    label = { Text(item.modelUsed.uppercase()) }
-                )
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Model badge
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            item.modelUsed.uppercase(),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    // Sync status
                     if (!item.synced) {
                         Icon(
                             Icons.Default.CloudOff,
-                            contentDescription = "Not synced",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.secondary
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    
+                }
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = formatDate(item.createdAt),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
-                    IconButton(onClick = onDelete) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(32.dp)
+                    ) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -316,34 +373,41 @@ private fun HistoryItemCard(
             
             Spacer(modifier = Modifier.height(8.dp))
             
+            // Original text
             Text(
                 text = item.originalText,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             
+            // Summary
             Text(
                 text = item.summary,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurface
             )
             
-            // Show metrics if available
+            // Metrics (subtle)
             if (item.rouge1 != null) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     MetricChip("R1: ${String.format("%.2f", item.rouge1)}")
-                    MetricChip("R2: ${String.format("%.2f", item.rouge2 ?: 0.0)}")
-                    MetricChip("RL: ${String.format("%.2f", item.rougeL ?: 0.0)}")
+                    if (item.rouge2 != null) {
+                        MetricChip("R2: ${String.format("%.2f", item.rouge2)}")
+                    }
+                    if (item.rougeL != null) {
+                        MetricChip("RL: ${String.format("%.2f", item.rougeL)}")
+                    }
                 }
             }
         }
@@ -352,17 +416,11 @@ private fun HistoryItemCard(
 
 @Composable
 private fun MetricChip(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.small
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer
-        )
-    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+    )
 }
 
 private fun formatDate(timestamp: Long): String {

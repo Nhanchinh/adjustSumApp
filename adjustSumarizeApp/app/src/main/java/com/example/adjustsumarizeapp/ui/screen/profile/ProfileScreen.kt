@@ -1,7 +1,10 @@
 package com.example.adjustsumarizeapp.ui.screen.profile
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,10 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.adjustsumarizeapp.ui.screen.home.HomeViewModel
+import com.example.adjustsumarizeapp.utils.clearFocusOnTap
 
 @Composable
 fun ProfileScreen(
@@ -25,174 +30,140 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
             .verticalScroll(scrollState)
+            .clearFocusOnTap()
     ) {
-        // Title
-        Text(
-            text = "Hồ sơ",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // User Info Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
+        // Simple User Info Section
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Simple avatar
+            Surface(
+                modifier = Modifier.size(72.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Icon(
-                    Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = state.userName.ifBlank { "User" },
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "Người dùng",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = state.userName.ifBlank { "User" },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Text(
+                text = "Người dùng",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
         
         // Statistics Section
-        Text(
-            text = "Thống kê",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                StatItem(
-                    icon = Icons.Default.Article,
-                    label = "Tổng số lần tóm tắt",
-                    value = "0"
-                )
-                
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                
-                StatItem(
-                    icon = Icons.Default.BarChart,
-                    label = "Model sử dụng nhiều nhất",
-                    value = "ViT5"
-                )
-                
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                
-                StatItem(
-                    icon = Icons.Default.CloudDone,
-                    label = "Đã đồng bộ",
-                    value = "Mới nhất"
-                )
-            }
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = "Thống kê",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+            
+            StatItem(
+                icon = Icons.Default.Article,
+                label = "Tổng số lần tóm tắt",
+                value = "0"
+            )
+            
+            StatItem(
+                icon = Icons.Default.BarChart,
+                label = "Model sử dụng nhiều nhất",
+                value = "ViT5"
+            )
+            
+            StatItem(
+                icon = Icons.Default.CloudDone,
+                label = "Đã đồng bộ",
+                value = "Mới nhất"
+            )
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
         
         // Settings Section
-        Text(
-            text = "Cài đặt",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = "Cài đặt",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+            
+            SettingItem(
+                icon = Icons.Default.Notifications,
+                title = "Thông báo",
+                subtitle = "Nhận thông báo khi đồng bộ hoàn tất"
+            )
+            
+            SettingItem(
+                icon = Icons.Default.Storage,
+                title = "Lưu trữ",
+                subtitle = "Quản lý dữ liệu offline"
+            )
+            
+            SettingItem(
+                icon = Icons.Default.Sync,
+                title = "Tự động đồng bộ",
+                subtitle = "Đồng bộ khi có kết nối mạng"
+            )
+        }
+        
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SettingItem(
-                    icon = Icons.Default.Notifications,
-                    title = "Thông báo",
-                    subtitle = "Nhận thông báo khi đồng bộ hoàn tất"
-                )
-                
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                
-                SettingItem(
-                    icon = Icons.Default.Storage,
-                    title = "Lưu trữ",
-                    subtitle = "Quản lý dữ liệu offline"
-                )
-                
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                
-                SettingItem(
-                    icon = Icons.Default.Sync,
-                    title = "Tự động đồng bộ",
-                    subtitle = "Đồng bộ khi có kết nối mạng"
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
         // About Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Ứng dụng tóm tắt văn bản",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Phiên bản 1.0.0",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Logout Button
-        Button(
-            onClick = {
-                viewModel.logout {
-                    onLogout()
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error
+            Text(
+                text = "Ứng dụng tóm tắt văn bản",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
             )
-        ) {
-            Icon(Icons.Default.Logout, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Đăng xuất")
+            Text(
+                text = "Phiên bản 1.0.0",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -202,29 +173,40 @@ private fun StatItem(
     label: String,
     value: String
 ) {
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Transparent
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
             Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }
 
@@ -234,26 +216,43 @@ private fun SettingItem(
     title: String,
     subtitle: String
 ) {
-    Row(
+    Surface(
+        onClick = { /* TODO: Handle click */ },
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Transparent
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
     }
