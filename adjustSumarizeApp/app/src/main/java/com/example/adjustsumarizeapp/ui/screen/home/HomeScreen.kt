@@ -27,7 +27,7 @@ import com.example.adjustsumarizeapp.ui.screen.history.HistoryViewModel
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    CHAT, HISTORY, PROFILE
+    CHAT, EVALUATE, HISTORY, PROFILE
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,6 +122,30 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Tạo chat mới", fontWeight = FontWeight.SemiBold)
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Evaluate Button
+                OutlinedButton(
+                    onClick = {
+                        currentScreen = Screen.EVALUATE
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Assessment,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Đánh giá tóm tắt", fontWeight = FontWeight.SemiBold)
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -317,6 +341,7 @@ fun HomeScreen(
                         Text(
                             text = when (currentScreen) {
                                 Screen.CHAT -> "Chat AI"
+                                Screen.EVALUATE -> "Đánh giá"
                                 Screen.HISTORY -> "Lịch sử"
                                 Screen.PROFILE -> "Hồ sơ"
                             },
@@ -351,6 +376,7 @@ fun HomeScreen(
             Box(modifier = Modifier.padding(paddingValues)) {
                 when (currentScreen) {
                     Screen.CHAT -> ChatScreen()
+                    Screen.EVALUATE -> com.example.adjustsumarizeapp.ui.screen.summarize.SummarizeScreen()
                     Screen.HISTORY -> com.example.adjustsumarizeapp.ui.screen.history.HistoryScreen()
                     Screen.PROFILE -> com.example.adjustsumarizeapp.ui.screen.profile.ProfileScreen(
                         onLogout = onLogout

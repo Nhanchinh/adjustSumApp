@@ -54,8 +54,32 @@ class SummarizeViewModel @Inject constructor(
         _state.update { it.copy(referenceText = text) }
     }
     
+    fun onCandidateTextChange(text: String) {
+        _state.update { it.copy(candidateText = text, error = null) }
+    }
+    
     fun toggleEvaluation(show: Boolean) {
         _state.update { it.copy(showEvaluation = show) }
+    }
+    
+    fun toggleBertScore(enabled: Boolean) {
+        _state.update { it.copy(calculateBertScore = enabled) }
+    }
+    
+    fun setMode(mode: EvaluationMode) {
+        _state.update { 
+            it.copy(
+                mode = mode,
+                error = null,
+                // Clear results when switching modes
+                summary = "",
+                rouge1 = 0.0,
+                rouge2 = 0.0,
+                rougeL = 0.0,
+                bleu = 0.0,
+                bertScore = null
+            )
+        }
     }
     
     fun summarize() {
@@ -124,7 +148,55 @@ class SummarizeViewModel @Inject constructor(
             val result = evaluateSummaryUseCase(
                 prediction = currentState.summary,
                 reference = currentState.referenceText,
-                calculateBert = false // Set to true if needed, but it's slow
+                calculateBert = currentState.calculateBertScore
+            )
+            
+            result.onSuccess { response ->
+                _state.update {
+                    it.copy(
+                        isEvaluating = false,
+                        rouge1 = response.rouge1,
+                        rouge2 = response.rouge2,
+                        rougeL = response.rougeL,
+                        bleu = response.bleu,
+                        bertScore = response.bertScore,
+                        successMessage = "Đánh giá hoàn tất!"
+                    )
+                }
+            }.onFailure { error ->
+                _state.update {
+                    it.copy(
+                        isEvaluating = false,
+                        error = error.message ?: "Lỗi đánh giá"
+                    )
+                }
+            }
+        }
+    }
+    
+    /**
+     * Evaluate-only mode: Compare candidateText with referenceText
+     */
+    fun evaluateOnly() {
+        val currentState = _state.value
+        
+        if (currentState.candidateText.isBlank()) {
+            _state.update { it.copy(error = "Vui lòng nhập văn bản đã tóm tắt") }
+            return
+        }
+        
+        if (currentState.referenceText.isBlank()) {
+            _state.update { it.copy(error = "Vui lòng nhập văn bản tham chiếu") }
+            return
+        }
+        
+        viewModelScope.launch {
+            _state.update { it.copy(isEvaluating = true, error = null) }
+            
+            val result = evaluateSummaryUseCase(
+                prediction = currentState.candidateText,
+                reference = currentState.referenceText,
+                calculateBert = currentState.calculateBertScore
             )
             
             result.onSuccess { response ->
