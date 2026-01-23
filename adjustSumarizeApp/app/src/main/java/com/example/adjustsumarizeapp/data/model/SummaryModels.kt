@@ -114,6 +114,27 @@ data class EvaluateResponse(
 )
 
 /**
+ * History Metrics Response (from backend /history endpoint)
+ * Different from EvaluationMetrics!
+ */
+data class HistoryMetrics(
+    @SerializedName("input_words")
+    val inputWords: Int,
+    
+    @SerializedName("output_words")
+    val outputWords: Int,
+    
+    @SerializedName("compression_ratio")
+    val compressionRatio: Float,
+    
+    @SerializedName("processing_time_ms")
+    val processingTimeMs: Int,
+    
+    @SerializedName("colab_inference_ms")
+    val colabInferenceMs: Double?
+)
+
+/**
  * History Item from API
  */
 data class HistoryItemDto(
@@ -121,10 +142,10 @@ data class HistoryItemDto(
     val id: String,
     
     @SerializedName("user_id")
-    val userId: String,
+    val userId: String?,  // Nullable - backend không trả về trong list
     
-    @SerializedName("original_text")
-    val originalText: String,
+    @SerializedName("input_text")  // FIXED: Backend dùng "input_text" không phải "original_text"
+    val inputText: String,
     
     @SerializedName("summary")
     val summary: String,
@@ -132,14 +153,11 @@ data class HistoryItemDto(
     @SerializedName("model_used")
     val modelUsed: String,
     
-    @SerializedName("inference_time_ms")
-    val inferenceTimeMs: Double?,  // Changed from Int to Double
-    
     @SerializedName("created_at")
     val createdAt: String,
     
     @SerializedName("metrics")
-    val metrics: EvaluationMetrics?
+    val metrics: HistoryMetrics  // FIXED: Dùng HistoryMetrics thay vì EvaluationMetrics
 )
 
 /**

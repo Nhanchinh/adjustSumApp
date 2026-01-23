@@ -1,5 +1,6 @@
 package com.example.adjustsumarizeapp.data.repository
 
+import com.example.adjustsumarizeapp.data.local.TokenManager
 import com.example.adjustsumarizeapp.data.local.dao.SummaryHistoryDao
 import com.example.adjustsumarizeapp.data.local.entity.SummaryHistoryEntity
 import com.example.adjustsumarizeapp.data.model.*
@@ -15,7 +16,8 @@ import javax.inject.Inject
  */
 class SummaryRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
-    private val summaryHistoryDao: SummaryHistoryDao
+    private val summaryHistoryDao: SummaryHistoryDao,
+    private val tokenManager: TokenManager
 ) : SummaryRepository {
     
     // ==================== Summarization ====================
@@ -171,27 +173,30 @@ class SummaryRepositoryImpl @Inject constructor(
     
     override suspend fun syncHistory(): Result<Unit> {
         return try {
-            // 1. Get remote history
+            // 1. Get current user ID
+            val currentUserId = tokenManager.getUserId() ?: return Result.failure(Exception("User not logged in"))
+            
+            // 2. Get remote history
             val remoteResult = getRemoteHistory(1, 100)
             
             if (remoteResult.isSuccess) {
                 val remoteHistory = remoteResult.getOrNull()?.items ?: emptyList()
                 
-                // 2. Convert to local entities and save
+                // 3. Convert to local entities and save
                 val localEntities = remoteHistory.map { dto ->
                     SummaryHistoryEntity(
                         id = dto.id,
-                        userId = dto.userId,
-                        originalText = dto.originalText,
+                        userId = currentUserId,  // FIXED: Use current user ID instead of null from API
+                        originalText = dto.inputText,
                         summary = dto.summary,
                         modelUsed = dto.modelUsed,
-                        inferenceTimeMs = dto.inferenceTimeMs,
+                        inferenceTimeMs = dto.metrics.colabInferenceMs,
                         createdAt = parseIsoDate(dto.createdAt),
-                        rouge1 = dto.metrics?.rouge1,
-                        rouge2 = dto.metrics?.rouge2,
-                        rougeL = dto.metrics?.rougeL,
-                        bleu = dto.metrics?.bleu,
-                        bertScore = dto.metrics?.bertScore,
+                        rouge1 = null,  // History metrics doesn't have evaluation metrics
+                        rouge2 = null,
+                        rougeL = null,
+                        bleu = null,
+                        bertScore = null,
                         synced = true,
                         modifiedAt = System.currentTimeMillis()
                     )
@@ -199,7 +204,7 @@ class SummaryRepositoryImpl @Inject constructor(
                 
                 summaryHistoryDao.insertAll(localEntities)
                 
-                // 3. Upload unsynced local items
+                // 4. Upload unsynced local items
                 val unsyncedItems = summaryHistoryDao.getUnsyncedHistory()
                 unsyncedItems.forEach { local ->
                     val metrics = if (local.rouge1 != null) {

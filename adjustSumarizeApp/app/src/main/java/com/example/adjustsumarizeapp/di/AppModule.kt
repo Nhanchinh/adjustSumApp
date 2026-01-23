@@ -121,9 +121,10 @@ object AppModule {
     @Singleton
     fun provideSummaryRepository(
         apiService: ApiService,
-        summaryHistoryDao: SummaryHistoryDao
+        summaryHistoryDao: SummaryHistoryDao,
+        tokenManager: TokenManager
     ): SummaryRepository {
-        return SummaryRepositoryImpl(apiService, summaryHistoryDao)
+        return SummaryRepositoryImpl(apiService, summaryHistoryDao, tokenManager)
     }
     
     // ==================== Utils ====================

@@ -150,7 +150,7 @@ fun HomeScreen(
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                // Simple History Section Header
+                // Simple History Section Header with "View All" button
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -158,17 +158,42 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Lịch sử",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (historyState.historyItems.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${historyState.historyItems.size}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            "Lịch sử",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (historyState.historyItems.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "${historyState.historyItems.size}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    
+                    // "View All" button
+                    TextButton(
+                        onClick = {
+                            currentScreen = Screen.HISTORY
+                            scope.launch { drawerState.close() }
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Text(
+                            "Xem tất cả",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }

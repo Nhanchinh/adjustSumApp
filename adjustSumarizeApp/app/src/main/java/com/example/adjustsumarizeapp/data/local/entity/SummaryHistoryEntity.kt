@@ -14,7 +14,7 @@ data class SummaryHistoryEntity(
     val id: String,
     
     @ColumnInfo(name = "user_id")
-    val userId: String,
+    val userId: String?,  // Nullable - backend không trả về trong list
     
     @ColumnInfo(name = "original_text")
     val originalText: String,

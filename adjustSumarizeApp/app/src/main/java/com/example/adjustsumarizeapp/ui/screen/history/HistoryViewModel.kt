@@ -24,8 +24,18 @@ class HistoryViewModel @Inject constructor(
     val state: StateFlow<HistoryState> = _state.asStateFlow()
     
     init {
-        loadHistory()
-        checkUnsyncedCount()
+        // Auto-sync on first load to ensure fresh data
+        viewModelScope.launch {
+            val result = syncHistoryUseCase()
+            result.onSuccess {
+                loadHistory()
+                checkUnsyncedCount()
+            }.onFailure {
+                // If sync fails, still load from local DB
+                loadHistory()
+                checkUnsyncedCount()
+            }
+        }
     }
     
     fun loadHistory() {
@@ -113,8 +123,32 @@ class HistoryViewModel @Inject constructor(
     }
     
     fun refreshHistory() {
-        loadHistory()
-        checkUnsyncedCount()
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            
+            // Sync from server first
+            val syncResult = syncHistoryUseCase()
+            
+            syncResult.onSuccess {
+                // Then reload from local DB
+                loadHistory()
+                _state.update { 
+                    it.copy(
+                        successMessage = "Đã làm mới lịch sử!",
+                        unsyncedCount = 0
+                    )
+                }
+            }.onFailure { error ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = error.message ?: "Lỗi làm mới lịch sử"
+                    )
+                }
+            }
+            
+            checkUnsyncedCount()
+        }
     }
     
     private fun checkUnsyncedCount() {

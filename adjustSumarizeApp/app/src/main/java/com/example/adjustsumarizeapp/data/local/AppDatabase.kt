@@ -21,7 +21,7 @@ data class UserEntity(
         UserEntity::class,
         SummaryHistoryEntity::class
     ],
-    version = 3,  // Increased version due to schema change (Int -> Double)
+    version = 4,  // Increased version: userId nullable + Int -> Double
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
