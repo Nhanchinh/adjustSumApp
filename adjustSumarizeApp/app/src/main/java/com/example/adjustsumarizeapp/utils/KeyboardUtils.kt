@@ -1,0 +1,34 @@
+package com.example.adjustsumarizeapp.utils
+
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.runtime.Composable
+
+/**
+ * Modifier extension để tự động dismiss keyboard khi tap ra ngoài.
+ * 
+ * Sử dụng:
+ * ```
+ * Column(
+ *     modifier = Modifier
+ *         .fillMaxSize()
+ *         .clearFocusOnTap()
+ * ) {
+ *     // Your content with TextField
+ * }
+ * ```
+ */
+@Composable
+fun Modifier.clearFocusOnTap(): Modifier {
+    val focusManager = LocalFocusManager.current
+    
+    return this.pointerInput(Unit) {
+        detectTapGestures(
+            onTap = {
+                focusManager.clearFocus()
+            }
+        )
+    }
+}
