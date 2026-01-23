@@ -25,3 +25,92 @@ replay_pid*
 
 # Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
 .kotlin/
+# Default ignored files
+/shelf/
+/workspace.xml
+# ========================
+# Android / Gradle
+# ========================
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+/build/
+/app/build/
+.gradle/
+local.properties
+
+# ========================
+# Android Studio / IntelliJ
+# ========================
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# ========================
+# Kotlin
+# ========================
+.kotlin/
+*.kotlin_module
+
+# ========================
+# Logs
+# ========================
+*.log
+
+# ========================
+# OS generated files
+# ========================
+.DS_Store
+Thumbs.db
+
+# ========================
+# Keystore (RẤT QUAN TRỌNG)
+# ========================
+*.jks
+*.keystore
+key.properties
+
+
+
+**/.idea/
+**/*.iml
+
+# ========================
+# Firebase / Google Services
+# ========================
+google-services.json
+firebase.json
+
+# ========================
+# Compose / Cache
+# ========================
+.compose/
+captures/
+
+# ========================
+# NDK / CMake (nếu có)
+# ========================
+.externalNativeBuild/
+.cxx/
+
+# ========================
+# Lint / Reports
+# ========================
+lint/
+lint-results*.html
+lint-results*.xml
+
+# ========================
+# Temporary files
+# ========================
+*.swp
+*.tmp
+*.bak
