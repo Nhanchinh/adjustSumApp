@@ -9,8 +9,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.adjustsumarizeapp.ui.screen.home.HomeScreen
 import com.example.adjustsumarizeapp.ui.screen.login.LoginScreen
+import com.example.adjustsumarizeapp.ui.screen.splash.SplashScreen
 
 object Routes {
+    const val SPLASH = "splash"
     const val LOGIN = "login"
     const val HOME = "home"
     
@@ -20,12 +22,28 @@ object Routes {
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Routes.LOGIN
+    startDestination: String = Routes.SPLASH  // Start with splash screen
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
+        // Splash Screen
+        composable(route = Routes.SPLASH) {
+            SplashScreen(
+                onNavigateToLogin = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
         // Login Screen
         composable(route = Routes.LOGIN) {
             LoginScreen(
@@ -47,12 +65,26 @@ fun AppNavGraph(
                 }
             )
         ) {
-            HomeScreen()
+            HomeScreen(
+                onLogout = {
+                    navController.navigate(Routes.LOGIN) {
+                        // Clear back stack so user cannot go back to Home
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
         
         // Simple Home route without arguments
         composable(route = Routes.HOME) {
-            HomeScreen()
+            HomeScreen(
+                onLogout = {
+                    navController.navigate(Routes.LOGIN) {
+                        // Clear back stack so user cannot go back to Home
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

@@ -76,6 +76,9 @@ dependencies {
     // ViewModel Compose
     implementation(libs.lifecycle.viewmodel.compose)
     
+    // Security - Encrypted SharedPreferences
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

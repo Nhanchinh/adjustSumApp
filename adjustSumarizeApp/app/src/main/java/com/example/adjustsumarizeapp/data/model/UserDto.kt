@@ -3,6 +3,9 @@ package com.example.adjustsumarizeapp.data.model
 import com.example.adjustsumarizeapp.domain.model.User
 import com.google.gson.annotations.SerializedName
 
+/**
+ * Data Transfer Object for User from API
+ */
 data class UserDto(
     @SerializedName("id")
     val id: String,
@@ -10,37 +13,67 @@ data class UserDto(
     @SerializedName("email")
     val email: String,
     
-    @SerializedName("name")
-    val name: String,
+    @SerializedName("full_name")
+    val fullName: String?,
     
-    @SerializedName("token")
-    val token: String? = null
+    @SerializedName("role")
+    val role: String = "user"
 ) {
-    fun toDomain(): User {
+    fun toDomain(token: String? = null): User {
         return User(
             id = id,
             email = email,
-            name = name,
+            name = fullName ?: email.substringBefore("@"),
             token = token
         )
     }
 }
 
+/**
+ * Login Request - FastAPI expects username (email) and password as form data
+ * But we'll send as JSON for simplicity
+ */
 data class LoginRequest(
-    @SerializedName("email")
-    val email: String,
+    @SerializedName("username")
+    val username: String,  // FastAPI OAuth2 expects "username" field
     
     @SerializedName("password")
     val password: String
 )
 
+/**
+ * Login Response from FastAPI
+ * Returns: access_token, refresh_token, token_type, user
+ */
 data class LoginResponse(
-    @SerializedName("success")
-    val success: Boolean,
+    @SerializedName("access_token")
+    val accessToken: String,
     
-    @SerializedName("message")
-    val message: String? = null,
+    @SerializedName("refresh_token")
+    val refreshToken: String,
+    
+    @SerializedName("token_type")
+    val tokenType: String = "bearer",
     
     @SerializedName("user")
-    val user: UserDto? = null
+    val user: UserDto
+)
+
+/**
+ * Refresh Token Request
+ */
+data class RefreshTokenRequest(
+    @SerializedName("refresh_token")
+    val refreshToken: String
+)
+
+/**
+ * Refresh Token Response
+ */
+data class RefreshTokenResponse(
+    @SerializedName("access_token")
+    val accessToken: String,
+    
+    @SerializedName("token_type")
+    val tokenType: String = "bearer"
 )

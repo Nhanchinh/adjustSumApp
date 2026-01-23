@@ -1,63 +1,101 @@
 package com.example.adjustsumarizeapp.data.repository
 
-import com.example.adjustsumarizeapp.data.model.LoginRequest
+import com.example.adjustsumarizeapp.data.local.TokenManager
 import com.example.adjustsumarizeapp.data.remote.ApiService
 import com.example.adjustsumarizeapp.domain.model.User
-import kotlinx.coroutines.delay
 import javax.inject.Inject
 import javax.inject.Singleton
 
 interface UserRepository {
     suspend fun login(email: String, password: String): Result<User>
     suspend fun logout(): Result<Unit>
+    suspend fun getCurrentUser(): Result<User>
+    fun isLoggedIn(): Boolean
 }
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val tokenManager: TokenManager
 ) : UserRepository {
     
     override suspend fun login(email: String, password: String): Result<User> {
         return try {
-            // Simulate network delay for demo
-            delay(1500)
+            // Call login API
+            val response = apiService.login(
+                username = email,  // FastAPI expects "username" field
+                password = password
+            )
             
-            // For demo purposes, simulate successful login
-            // In production, use actual API call:
-            // val response = apiService.login(LoginRequest(email, password))
-            
-            if (email.isNotBlank() && password.length >= 6) {
-                val demoUser = User(
-                    id = "1",
-                    email = email,
-                    name = email.substringBefore("@"),
-                    token = "demo_token_${System.currentTimeMillis()}"
+            if (response.isSuccessful && response.body() != null) {
+                val loginResponse = response.body()!!
+                
+                // Save tokens
+                tokenManager.saveAccessToken(loginResponse.accessToken)
+                tokenManager.saveRefreshToken(loginResponse.refreshToken)
+                
+                // Convert UserDto to User domain model
+                val user = loginResponse.user.toDomain(token = loginResponse.accessToken)
+                
+                // Save user info
+                tokenManager.saveUserInfo(
+                    userId = user.id,
+                    email = user.email,
+                    name = user.name
                 )
-                Result.success(demoUser)
+                
+                Result.success(user)
             } else {
-                Result.failure(Exception("Invalid credentials"))
+                val errorMessage = try {
+                    response.errorBody()?.string() ?: "Login failed"
+                } catch (e: Exception) {
+                    "Login failed"
+                }
+                Result.failure(Exception(errorMessage))
             }
-            
-            /* Production code:
-            if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.user?.toDomain()?.let {
-                    Result.success(it)
-                } ?: Result.failure(Exception("User data is null"))
-            } else {
-                Result.failure(Exception(response.body()?.message ?: "Login failed"))
-            }
-            */
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Network error: ${e.message}"))
         }
     }
     
     override suspend fun logout(): Result<Unit> {
         return try {
-            // Clear local data, tokens, etc.
+            // Clear all stored data
+            tokenManager.clearAll()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+    
+    override suspend fun getCurrentUser(): Result<User> {
+        return try {
+            val authHeader = tokenManager.getAuthorizationHeader()
+                ?: return Result.failure(Exception("Not authenticated"))
+            
+            val response = apiService.getCurrentUser(authHeader)
+            
+            if (response.isSuccessful && response.body() != null) {
+                val userDto = response.body()!!
+                val user = userDto.toDomain(token = tokenManager.getAccessToken())
+                
+                // Update cached user info
+                tokenManager.saveUserInfo(
+                    userId = user.id,
+                    email = user.email,
+                    name = user.name
+                )
+                
+                Result.success(user)
+            } else {
+                Result.failure(Exception("Failed to get user info"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override fun isLoggedIn(): Boolean {
+        return tokenManager.isLoggedIn()
     }
 }

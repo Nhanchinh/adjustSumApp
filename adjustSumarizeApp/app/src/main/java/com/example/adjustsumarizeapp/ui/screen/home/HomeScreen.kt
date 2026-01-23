@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,7 +33,8 @@ import com.example.adjustsumarizeapp.ui.theme.AdjustSumarizeAppTheme
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    onLogout: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     
@@ -99,6 +101,20 @@ fun HomeScreen(
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
         )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Logout Button
+        androidx.compose.material3.Button(
+            onClick = {
+                viewModel.logout {
+                    onLogout()
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "Đăng xuất")
+        }
     }
 }
 
