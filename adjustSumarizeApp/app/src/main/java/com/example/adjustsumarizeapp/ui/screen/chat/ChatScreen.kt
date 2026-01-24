@@ -1,14 +1,17 @@
 package com.example.adjustsumarizeapp.ui.screen.chat
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,9 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.adjustsumarizeapp.data.model.ChatMessage
 import com.example.adjustsumarizeapp.data.model.MessageType
@@ -33,6 +39,11 @@ fun ChatScreen(
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+    
+    var showEvaluationDialog by remember { mutableStateOf(false) }
+    var selectedMessageForEval by remember { mutableStateOf<ChatMessage?>(null) }
     
     // Auto-scroll to bottom when new message
     LaunchedEffect(state.messages.size) {
@@ -59,7 +70,19 @@ fun ChatScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(state.messages, key = { it.id }) { message ->
-                MessageBubble(message = message)
+                MessageBubble(
+                    message = message,
+                    onCopy = { text ->
+                        clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(text))
+                        android.widget.Toast.makeText(context, "Đã sao chép", android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    onLike = { viewModel.onMessageFeedback(message.id, com.example.adjustsumarizeapp.data.model.FeedbackType.LIKE) },
+                    onDislike = { viewModel.onMessageFeedback(message.id, com.example.adjustsumarizeapp.data.model.FeedbackType.DISLIKE) },
+                    onDetailedEval = {
+                        selectedMessageForEval = message
+                        showEvaluationDialog = true
+                    }
+                )
             }
             
             // Empty state
@@ -224,10 +247,31 @@ fun ChatScreen(
             }
         }
     }
+    
+    // Detailed Evaluation Dialog
+    if (showEvaluationDialog && selectedMessageForEval != null) {
+        DetailedEvaluationDialog(
+            message = selectedMessageForEval!!,
+            onDismiss = { showEvaluationDialog = false },
+            onSubmit = { evaluation ->
+                viewModel.onDetailedEvaluation(selectedMessageForEval!!.id, evaluation)
+                showEvaluationDialog = false
+                android.widget.Toast.makeText(context, "Đã lưu đánh giá", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 }
 
 @Composable
-private fun MessageBubble(message: ChatMessage) {
+private fun MessageBubble(
+    message: ChatMessage,
+    onCopy: (String) -> Unit = {},
+    onLike: () -> Unit = {},
+    onDislike: () -> Unit = {},
+    onDetailedEval: () -> Unit = {}
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.isFromUser) 
@@ -352,6 +396,118 @@ private fun MessageBubble(message: ChatMessage) {
                 }
             }
             
+            // Action buttons
+            // User messages: Only Copy
+            // Bot summary messages: Copy, Like, Dislike
+            if (message.type != MessageType.LOADING && message.type != MessageType.ERROR) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    horizontalArrangement = if (message.isFromUser) Arrangement.End else Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Copy button (for all messages)
+                    IconButton(
+                        onClick = { onCopy(message.text) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = "Copy",
+                            modifier = Modifier.size(16.dp),
+                            tint = if (message.isFromUser)
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                    
+                    // Like & Dislike buttons (only for bot summary messages)
+                    if (!message.isFromUser && message.type == MessageType.SUMMARY_RESULT) {
+                        // Like button
+                        IconButton(
+                            onClick = onLike,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                if (message.userFeedback?.type == com.example.adjustsumarizeapp.data.model.FeedbackType.LIKE)
+                                    Icons.Default.ThumbUp
+                                else
+                                    Icons.Default.ThumbUpOffAlt,
+                                contentDescription = "Like",
+                                modifier = Modifier.size(16.dp),
+                                tint = if (message.userFeedback?.type == com.example.adjustsumarizeapp.data.model.FeedbackType.LIKE)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+                        
+                        // Dislike button
+                        IconButton(
+                            onClick = onDislike,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                if (message.userFeedback?.type == com.example.adjustsumarizeapp.data.model.FeedbackType.DISLIKE)
+                                    Icons.Default.ThumbDown
+                                else
+                                    Icons.Default.ThumbDownOffAlt,
+                                contentDescription = "Dislike",
+                                modifier = Modifier.size(16.dp),
+                                tint = if (message.userFeedback?.type == com.example.adjustsumarizeapp.data.model.FeedbackType.DISLIKE)
+                                    MaterialTheme.colorScheme.error
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+                        
+                        // More options button (3 dots)
+                        Box {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "More",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (message.detailedEvaluation != null)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                            
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { 
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text("Đánh giá chi tiết")
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onDetailedEval()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            
             // Timestamp
             if (message.type != MessageType.LOADING) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -397,5 +553,323 @@ private fun formatTime(timestamp: Long): String {
         diff < 86400000 -> "${diff / 3600000} giờ trước"
         else -> java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
             .format(java.util.Date(timestamp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DetailedEvaluationDialog(
+    message: ChatMessage,
+    onDismiss: () -> Unit,
+    onSubmit: (com.example.adjustsumarizeapp.data.model.DetailedEvaluation) -> Unit
+) {
+    var fluency by remember { mutableStateOf(message.detailedEvaluation?.fluency) }
+    var coherence by remember { mutableStateOf(message.detailedEvaluation?.coherence) }
+    var relevance by remember { mutableStateOf(message.detailedEvaluation?.relevance) }
+    var consistency by remember { mutableStateOf(message.detailedEvaluation?.consistency) }
+    var comment by remember { mutableStateOf(message.detailedEvaluation?.comment ?: "") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth(0.95f)
+            .fillMaxHeight(0.85f)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Simple Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Đánh giá chi tiết",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            "Đánh giá chất lượng tóm tắt (1-5 điểm)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Default.Close, 
+                            "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Summary Preview
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                "Summary đang đánh giá",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                message.text,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    // Criteria
+                    EvaluationCriterion(
+                        label = "Fluency",
+                        description = "Văn phong tự nhiên, không lỗi ngữ pháp",
+                        score = fluency,
+                        onScoreChange = { fluency = it }
+                    )
+                    
+                    EvaluationCriterion(
+                        label = "Coherence",
+                        description = "Các ý kết nối chặt chẽ, logic rõ ràng",
+                        score = coherence,
+                        onScoreChange = { coherence = it }
+                    )
+                    
+                    EvaluationCriterion(
+                        label = "Relevance",
+                        description = "Nội dung đúng trọng tâm, không thừa",
+                        score = relevance,
+                        onScoreChange = { relevance = it }
+                    )
+                    
+                    EvaluationCriterion(
+                        label = "Consistency",
+                        description = "Không mâu thuẫn, thông tin chính xác",
+                        score = consistency,
+                        onScoreChange = { consistency = it }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    // Comment
+                    Text(
+                        "Nhận xét (tuỳ chọn)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    OutlinedTextField(
+                        value = comment,
+                        onValueChange = { if (it.length <= 500) comment = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { 
+                            Text(
+                                "Ghi chú về bản tóm tắt...",
+                                style = MaterialTheme.typography.bodySmall
+                            ) 
+                        },
+                        minLines = 3,
+                        maxLines = 4,
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    )
+                    Text(
+                        "${comment.length}/500",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                }
+                
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                
+                // Bottom Buttons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Hủy", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Button(
+                        onClick = {
+                            onSubmit(
+                                com.example.adjustsumarizeapp.data.model.DetailedEvaluation(
+                                    fluency = fluency,
+                                    coherence = coherence,
+                                    relevance = relevance,
+                                    consistency = consistency,
+                                    comment = comment
+                                )
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .height(48.dp),
+                        enabled = fluency != null || coherence != null || relevance != null || consistency != null,
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp)
+                    ) {
+                        Text(
+                            "Lưu đánh giá", 
+                            style = MaterialTheme.typography.bodyMedium, 
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EvaluationCriterion(
+    label: String,
+    description: String,
+    score: Int?,
+    onScoreChange: (Int?) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 16.sp
+                )
+            }
+            if (score != null) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        "$score/5",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        // Score Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            (1..5).forEach { value ->
+                val isSelected = score != null && score >= value
+                Button(
+                    onClick = { onScoreChange(value) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        contentColor = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        "$value",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
+        
+        if (score != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            TextButton(
+                onClick = { onScoreChange(null) },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Icon(
+                    Icons.Default.Clear,
+                    "Clear",
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    "Xóa điểm",
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
     }
 }

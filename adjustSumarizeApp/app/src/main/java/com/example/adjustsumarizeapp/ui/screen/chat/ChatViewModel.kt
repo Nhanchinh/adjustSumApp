@@ -3,9 +3,7 @@ package com.example.adjustsumarizeapp.ui.screen.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.adjustsumarizeapp.data.local.TokenManager
-import com.example.adjustsumarizeapp.data.model.ChatMessage
-import com.example.adjustsumarizeapp.data.model.MessageMetadata
-import com.example.adjustsumarizeapp.data.model.MessageType
+import com.example.adjustsumarizeapp.data.model.*
 import com.example.adjustsumarizeapp.domain.usecase.GetModelsUseCase
 import com.example.adjustsumarizeapp.domain.usecase.SummarizeTextUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -160,6 +158,42 @@ class ChatViewModel @Inject constructor(
                 }
             }
         }
+    }
+    
+    fun onMessageFeedback(messageId: String, feedbackType: FeedbackType) {
+        _state.update { currentState ->
+            val updatedMessages = currentState.messages.map { message ->
+                if (message.id == messageId) {
+                    message.copy(
+                        userFeedback = UserFeedback(
+                            type = feedbackType,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                } else {
+                    message
+                }
+            }
+            currentState.copy(messages = updatedMessages)
+        }
+    }
+    
+    fun onDetailedEvaluation(messageId: String, evaluation: DetailedEvaluation) {
+        _state.update { currentState ->
+            val updatedMessages = currentState.messages.map { message ->
+                if (message.id == messageId) {
+                    message.copy(detailedEvaluation = evaluation)
+                } else {
+                    message
+                }
+            }
+            currentState.copy(messages = updatedMessages)
+        }
+    }
+    
+    fun copyMessageToClipboard(text: String): Boolean {
+        // Return true to indicate copy action (actual clipboard handled in UI)
+        return true
     }
     
     fun clearChat() {

@@ -55,7 +55,7 @@ class SummaryRepositoryImpl @Inject constructor(
         }
     }
     
-    override suspend fun checkColabHealth(): Result<Map<String, Any>> {
+    override suspend fun checkColabHealth(): Result<ColabHealthResponse> {
         return try {
             val response = apiService.checkColabHealth()
             
@@ -136,12 +136,26 @@ class SummaryRepositoryImpl @Inject constructor(
         metrics: EvaluationMetrics?
     ): Result<HistoryItemDto> {
         return try {
+            // Calculate word counts
+            val inputWords = originalText.trim().split("\\s+".toRegex()).size
+            val outputWords = summary.trim().split("\\s+".toRegex()).size
+            
+            // Calculate compression ratio
+            val compressionRatio = if (inputWords > 0) {
+                ((outputWords.toFloat() / inputWords.toFloat()) * 100)
+            } else {
+                0f
+            }
+            
             val request = SaveHistoryRequest(
-                originalText = originalText,
+                inputText = originalText,
                 summary = summary,
                 modelUsed = modelUsed,
-                inferenceTimeMs = inferenceTimeMs,
-                metrics = metrics
+                inputWords = inputWords,
+                outputWords = outputWords,
+                compressionRatio = compressionRatio,
+                processingTimeMs = inferenceTimeMs?.toInt() ?: 0,
+                colabInferenceMs = inferenceTimeMs?.toFloat()
             )
             val response = apiService.saveHistory(request)
             

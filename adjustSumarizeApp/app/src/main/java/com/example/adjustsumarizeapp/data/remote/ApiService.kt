@@ -54,7 +54,7 @@ interface ApiService {
      * Check Colab health
      */
     @GET("summarization/health")
-    suspend fun checkColabHealth(): Response<Map<String, Any>>
+    suspend fun checkColabHealth(): Response<ColabHealthResponse>
     
     // ==================== Evaluation Endpoints ====================
     
@@ -71,7 +71,7 @@ interface ApiService {
     /**
      * Get user's summary history
      */
-    @GET("history/")
+    @GET("history")
     suspend fun getHistory(
         @Query("page") page: Int = 1,
         @Query("page_size") pageSize: Int = 20
@@ -80,7 +80,7 @@ interface ApiService {
     /**
      * Save summary to history
      */
-    @POST("history/")
+    @POST("history")
     suspend fun saveHistory(
         @Body request: SaveHistoryRequest
     ): Response<HistoryItemDto>

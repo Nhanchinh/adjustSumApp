@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.adjustsumarizeapp.data.local.entity.SummaryHistoryEntity
+import com.example.adjustsumarizeapp.data.model.ColabHealthResponse
 import com.example.adjustsumarizeapp.ui.screen.chat.ChatScreen
 import com.example.adjustsumarizeapp.ui.screen.chat.ChatViewModel
 import com.example.adjustsumarizeapp.ui.screen.history.HistoryViewModel
@@ -266,6 +267,15 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
                     
+                    // Colab Connection Status Row
+                    ColabStatusRow(
+                        status = state.colabStatus,
+                        healthInfo = state.colabHealth,
+                        onCheckConnection = { homeViewModel.checkColabConnection() }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
                     // Simple Profile Row
                     Surface(
                         onClick = {
@@ -408,6 +418,118 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ColabStatusRow(
+    status: ColabConnectionStatus,
+    healthInfo: ColabHealthResponse?,
+    onCheckConnection: () -> Unit
+) {
+    Surface(
+        onClick = onCheckConnection,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = when (status) {
+            ColabConnectionStatus.CONNECTED -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            ColabConnectionStatus.DISCONNECTED -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+            ColabConnectionStatus.CHECKING -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ColabConnectionStatus.UNKNOWN -> Color.Transparent
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Status Icon
+            when (status) {
+                ColabConnectionStatus.CONNECTED -> {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                ColabConnectionStatus.DISCONNECTED -> {
+                    Icon(
+                        Icons.Default.Error,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+                ColabConnectionStatus.CHECKING -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                ColabConnectionStatus.UNKNOWN -> {
+                    Icon(
+                        Icons.Default.CloudQueue,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = when (status) {
+                        ColabConnectionStatus.CONNECTED -> "Colab đã kết nối"
+                        ColabConnectionStatus.DISCONNECTED -> "Colab ngắt kết nối"
+                        ColabConnectionStatus.CHECKING -> "Đang kiểm tra..."
+                        ColabConnectionStatus.UNKNOWN -> "Chưa kiểm tra"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = when (status) {
+                        ColabConnectionStatus.CONNECTED -> MaterialTheme.colorScheme.primary
+                        ColabConnectionStatus.DISCONNECTED -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+                
+                // GPU Info or Error Message
+                if (status == ColabConnectionStatus.CONNECTED && healthInfo?.gpuAvailable == true) {
+                    Text(
+                        text = "GPU: Có sẵn ✓",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                } else if (status == ColabConnectionStatus.CONNECTED && healthInfo?.gpuAvailable == false) {
+                    Text(
+                        text = "GPU: Không có",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                    )
+                } else if (status == ColabConnectionStatus.DISCONNECTED) {
+                    Text(
+                        text = healthInfo?.error?.take(30) ?: "Nhấn để thử lại",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
+            // Refresh icon (always show for manual check)
+            Icon(
+                Icons.Default.Refresh,
+                contentDescription = "Kiểm tra lại",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
         }
     }
 }

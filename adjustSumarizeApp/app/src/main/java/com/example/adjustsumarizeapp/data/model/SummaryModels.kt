@@ -181,8 +181,8 @@ data class HistoryResponse(
  * Save History Request
  */
 data class SaveHistoryRequest(
-    @SerializedName("original_text")
-    val originalText: String,
+    @SerializedName("input_text")
+    val inputText: String,
     
     @SerializedName("summary")
     val summary: String,
@@ -190,9 +190,36 @@ data class SaveHistoryRequest(
     @SerializedName("model_used")
     val modelUsed: String,
     
-    @SerializedName("inference_time_ms")
-    val inferenceTimeMs: Double?,  // Changed from Int to Double
+    @SerializedName("input_words")
+    val inputWords: Int = 0,
     
-    @SerializedName("metrics")
-    val metrics: EvaluationMetrics?
+    @SerializedName("output_words")
+    val outputWords: Int = 0,
+    
+    @SerializedName("compression_ratio")
+    val compressionRatio: Float = 0f,
+    
+    @SerializedName("processing_time_ms")
+    val processingTimeMs: Int = 0,
+    
+    @SerializedName("colab_inference_ms")
+    val colabInferenceMs: Float? = null
+)
+
+/**
+ * Colab Health Check Response
+ * Backend returns: {"status": "connected"|"disconnected", "colab_url": "...", "gpu_available": true|false, "error": "..."}
+ */
+data class ColabHealthResponse(
+    @SerializedName("status")
+    val status: String,  // "connected" hoặc "disconnected"
+    
+    @SerializedName("colab_url")
+    val colabUrl: String?,
+    
+    @SerializedName("gpu_available")
+    val gpuAvailable: Boolean?,
+    
+    @SerializedName("error")
+    val error: String?
 )

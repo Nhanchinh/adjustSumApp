@@ -15,7 +15,7 @@ interface SummaryRepository {
     
     suspend fun getAvailableModels(): Result<List<ModelInfo>>
     
-    suspend fun checkColabHealth(): Result<Map<String, Any>>
+    suspend fun checkColabHealth(): Result<ColabHealthResponse>
     
     // Evaluation
     suspend fun evaluateSummary(
