@@ -3,10 +3,12 @@ package com.example.adjustsumarizeapp.ui.screen.summarize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.adjustsumarizeapp.data.local.TokenManager
+import com.example.adjustsumarizeapp.domain.repository.SummaryRepository
 import com.example.adjustsumarizeapp.domain.usecase.EvaluateSummaryUseCase
 import com.example.adjustsumarizeapp.domain.usecase.GetModelsUseCase
 import com.example.adjustsumarizeapp.domain.usecase.SummarizeTextUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,11 +21,15 @@ class SummarizeViewModel @Inject constructor(
     private val summarizeTextUseCase: SummarizeTextUseCase,
     private val getModelsUseCase: GetModelsUseCase,
     private val evaluateSummaryUseCase: EvaluateSummaryUseCase,
+    private val summaryRepository: SummaryRepository,
     private val tokenManager: TokenManager
 ) : ViewModel() {
     
     private val _state = MutableStateFlow(SummarizeState())
     val state: StateFlow<SummarizeState> = _state.asStateFlow()
+
+    private var summarizeJob: Job? = null
+    private var evaluateJob: Job? = null
     
     init {
         loadModels()
@@ -89,11 +95,11 @@ class SummarizeViewModel @Inject constructor(
             _state.update { it.copy(error = "Vui lòng nhập văn bản cần tóm tắt") }
             return
         }
-        
-        viewModelScope.launch {
+
+        summarizeJob?.cancel()
+        summarizeJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null, summary = "") }
             
-            // Get user ID from token
             val userId = tokenManager.getUserId() ?: "unknown"
             
             val result = summarizeTextUseCase(
@@ -114,7 +120,6 @@ class SummarizeViewModel @Inject constructor(
                     )
                 }
                 
-                // Auto-evaluate if reference text is provided
                 if (currentState.showEvaluation && currentState.referenceText.isNotBlank()) {
                     evaluateSummary()
                 }
@@ -141,8 +146,9 @@ class SummarizeViewModel @Inject constructor(
             _state.update { it.copy(error = "Vui lòng nhập văn bản tham chiếu") }
             return
         }
-        
-        viewModelScope.launch {
+
+        evaluateJob?.cancel()
+        evaluateJob = viewModelScope.launch {
             _state.update { it.copy(isEvaluating = true, error = null) }
             
             val result = evaluateSummaryUseCase(
@@ -189,8 +195,9 @@ class SummarizeViewModel @Inject constructor(
             _state.update { it.copy(error = "Vui lòng nhập văn bản tham chiếu") }
             return
         }
-        
-        viewModelScope.launch {
+
+        evaluateJob?.cancel()
+        evaluateJob = viewModelScope.launch {
             _state.update { it.copy(isEvaluating = true, error = null) }
             
             val result = evaluateSummaryUseCase(
@@ -222,6 +229,47 @@ class SummarizeViewModel @Inject constructor(
         }
     }
     
+    fun generateReference() {
+        val text = _state.value.inputText
+        if (text.isBlank()) {
+            _state.update { it.copy(error = "Vui lòng nhập văn bản gốc trước") }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isGeneratingReference = true, error = null) }
+
+            summaryRepository.generateReference(text).onSuccess { response ->
+                _state.update {
+                    it.copy(
+                        referenceText = response.referenceSummary,
+                        isGeneratingReference = false,
+                        successMessage = "Đã tạo tóm tắt tham chiếu (${response.processingTimeMs}ms)"
+                    )
+                }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isGeneratingReference = false,
+                        error = "Lỗi tạo tham chiếu: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun cancelSummarize() {
+        summarizeJob?.cancel()
+        summarizeJob = null
+        _state.update { it.copy(isLoading = false, error = "Đã hủy tóm tắt") }
+    }
+
+    fun cancelEvaluate() {
+        evaluateJob?.cancel()
+        evaluateJob = null
+        _state.update { it.copy(isEvaluating = false, error = "Đã hủy đánh giá") }
+    }
+
     fun clearMessages() {
         _state.update { it.copy(error = null, successMessage = null) }
     }

@@ -34,6 +34,14 @@ interface ApiService {
         @Body request: RefreshTokenRequest
     ): Response<RefreshTokenResponse>
     
+    /**
+     * Update user settings (consent, profile)
+     */
+    @PUT("auth/settings")
+    suspend fun updateSettings(
+        @Body request: UpdateSettingsRequest
+    ): Response<UserPublicDto>
+    
     // ==================== Summarization Endpoints ====================
     
     /**
@@ -56,6 +64,14 @@ interface ApiService {
     @GET("summarization/health")
     suspend fun checkColabHealth(): Response<ColabHealthResponse>
     
+    /**
+     * Generate gold reference summary using Gemini AI
+     */
+    @POST("summarization/generate-reference")
+    suspend fun generateReference(
+        @Body request: GenerateReferenceRequest
+    ): Response<GenerateReferenceResponse>
+
     // ==================== Evaluation Endpoints ====================
     
     /**

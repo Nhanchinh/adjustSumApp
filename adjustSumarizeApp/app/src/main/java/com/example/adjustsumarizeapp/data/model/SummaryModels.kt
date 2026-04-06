@@ -360,3 +360,33 @@ data class UserPublicDto(
     @SerializedName("consent_share_data")
     val consentShareData: Boolean = true
 )
+
+/**
+ * Request to update user settings (privacy, profile)
+ */
+/**
+ * Request to generate a gold reference summary using Gemini AI
+ */
+data class GenerateReferenceRequest(
+    @SerializedName("text")
+    val text: String
+)
+
+data class GenerateReferenceResponse(
+    @SerializedName("reference_summary")
+    val referenceSummary: String,
+
+    @SerializedName("processing_time_ms")
+    val processingTimeMs: Int
+)
+
+/**
+ * Request to update user settings (privacy, profile)
+ */
+data class UpdateSettingsRequest(
+    @SerializedName("consent_share_data")
+    val consentShareData: Boolean? = null,
+
+    @SerializedName("full_name")
+    val fullName: String? = null
+)

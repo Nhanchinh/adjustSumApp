@@ -22,13 +22,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.adjustsumarizeapp.data.local.entity.SummaryHistoryEntity
 import com.example.adjustsumarizeapp.data.model.ColabHealthResponse
-import com.example.adjustsumarizeapp.ui.screen.chat.ChatScreen
-import com.example.adjustsumarizeapp.ui.screen.chat.ChatViewModel
 import com.example.adjustsumarizeapp.ui.screen.history.HistoryViewModel
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    CHAT, EVALUATE, HISTORY, PROFILE, ADMIN_OVERVIEW
+    SUMMARIZE, HISTORY, PROFILE, ADMIN_OVERVIEW
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,7 +36,7 @@ fun HomeScreen(
     historyViewModel: HistoryViewModel = hiltViewModel(),
     onLogout: () -> Unit
 ) {
-    var currentScreen by remember { mutableStateOf(Screen.CHAT) }
+    var currentScreen by remember { mutableStateOf(Screen.SUMMARIZE) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val historyState by historyViewModel.state.collectAsState()
@@ -102,55 +100,6 @@ fun HomeScreen(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // New Chat Button - Prominent!
-                FilledTonalButton(
-                    onClick = {
-                        currentScreen = Screen.CHAT
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Tạo chat mới", fontWeight = FontWeight.SemiBold)
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Evaluate Button
-                OutlinedButton(
-                    onClick = {
-                        currentScreen = Screen.EVALUATE
-                        scope.launch { drawerState.close() }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Assessment,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Đánh giá tóm tắt", fontWeight = FontWeight.SemiBold)
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
                 // Admin Section (Only for admin users)
                 if (state.currentUser?.role == "admin") {
                     HorizontalDivider(
@@ -170,13 +119,13 @@ fun HomeScreen(
                             Icons.Default.Shield,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFFFFA726)
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             "ADMIN",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFFA726)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                     
@@ -190,8 +139,8 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = Color(0xFFFFA726).copy(alpha = 0.15f),
-                            contentColor = Color(0xFFFFA726)
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     ) {
                         Icon(
@@ -294,7 +243,7 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "Bắt đầu chat để lưu lịch sử",
+                                    "Bắt đầu tóm tắt để lưu lịch sử",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
@@ -432,8 +381,7 @@ fun HomeScreen(
                     title = {
                         Text(
                             text = when (currentScreen) {
-                                Screen.CHAT -> "Chat AI"
-                                Screen.EVALUATE -> "Đánh giá"
+                                Screen.SUMMARIZE -> "Tóm tắt"
                                 Screen.HISTORY -> "Lịch sử"
                                 Screen.PROFILE -> "Hồ sơ"
                                 Screen.ADMIN_OVERVIEW -> "Admin"
@@ -443,18 +391,18 @@ fun HomeScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = {
-                            if (currentScreen == Screen.CHAT) {
+                            if (currentScreen == Screen.SUMMARIZE) {
                                 scope.launch { drawerState.open() }
                             } else {
-                                currentScreen = Screen.CHAT
+                                currentScreen = Screen.SUMMARIZE
                             }
                         }) {
                             Icon(
-                                imageVector = if (currentScreen == Screen.CHAT) 
+                                imageVector = if (currentScreen == Screen.SUMMARIZE) 
                                     Icons.Default.Menu 
                                 else 
                                     Icons.Default.ArrowBack,
-                                contentDescription = if (currentScreen == Screen.CHAT) "Menu" else "Back"
+                                contentDescription = if (currentScreen == Screen.SUMMARIZE) "Menu" else "Back"
                             )
                         }
                     },
@@ -468,8 +416,7 @@ fun HomeScreen(
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
                 when (currentScreen) {
-                    Screen.CHAT -> ChatScreen()
-                    Screen.EVALUATE -> com.example.adjustsumarizeapp.ui.screen.summarize.SummarizeScreen()
+                    Screen.SUMMARIZE -> com.example.adjustsumarizeapp.ui.screen.summarize.SummarizeScreen()
                     Screen.HISTORY -> com.example.adjustsumarizeapp.ui.screen.history.HistoryScreen()
                     Screen.PROFILE -> com.example.adjustsumarizeapp.ui.screen.profile.ProfileScreen(
                         onLogout = onLogout
@@ -610,9 +557,8 @@ private fun HistoryDrawerItem(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Simple icon (no background circle)
             Icon(
-                Icons.Default.ChatBubbleOutline,
+                Icons.Default.Description,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant

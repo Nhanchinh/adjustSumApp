@@ -37,6 +37,7 @@ data class SummarizeState(
     // UI States
     val isLoading: Boolean = false,
     val isEvaluating: Boolean = false,
+    val isGeneratingReference: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null
 )

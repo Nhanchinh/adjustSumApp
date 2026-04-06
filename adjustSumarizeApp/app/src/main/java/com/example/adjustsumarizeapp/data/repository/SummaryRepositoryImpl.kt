@@ -300,6 +300,39 @@ class SummaryRepositoryImpl @Inject constructor(
         }
     }
     
+    // ==================== AI Reference ====================
+
+    override suspend fun generateReference(text: String): Result<GenerateReferenceResponse> {
+        return try {
+            val request = GenerateReferenceRequest(text = text)
+            val response = apiService.generateReference(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Không thể tạo tóm tắt tham chiếu"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ==================== Settings ====================
+
+    override suspend fun updateSettings(consentShareData: Boolean?, fullName: String?): Result<UserPublicDto> {
+        return try {
+            val request = UpdateSettingsRequest(consentShareData = consentShareData, fullName = fullName)
+            val response = apiService.updateSettings(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Không thể cập nhật cài đặt: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // ==================== Helper Functions ====================
     
     private fun parseIsoDate(isoDate: String): Long {

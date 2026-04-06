@@ -64,4 +64,10 @@ interface SummaryRepository {
     suspend fun getAnalytics(): Result<AnalyticsResponseDto>
     
     suspend fun getAdminUsers(): Result<List<UserPublicDto>>
+
+    // AI Reference
+    suspend fun generateReference(text: String): Result<GenerateReferenceResponse>
+
+    // Settings
+    suspend fun updateSettings(consentShareData: Boolean? = null, fullName: String? = null): Result<UserPublicDto>
 }

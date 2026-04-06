@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,9 +54,10 @@ fun SummarizeScreen(
             Row(
                 modifier = Modifier.padding(4.dp)
             ) {
+                val isBusy = state.isLoading || state.isEvaluating
                 // Tab 1: Tóm tắt + Đánh giá
                 Surface(
-                    onClick = { viewModel.setMode(EvaluationMode.SUMMARIZE_AND_EVALUATE) },
+                    onClick = { if (!isBusy) viewModel.setMode(EvaluationMode.SUMMARIZE_AND_EVALUATE) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(6.dp),
                     color = if (state.mode == EvaluationMode.SUMMARIZE_AND_EVALUATE) 
@@ -82,7 +85,7 @@ fun SummarizeScreen(
                 
                 // Tab 2: Chỉ đánh giá
                 Surface(
-                    onClick = { viewModel.setMode(EvaluationMode.EVALUATE_ONLY) },
+                    onClick = { if (!isBusy) viewModel.setMode(EvaluationMode.EVALUATE_ONLY) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(6.dp),
                     color = if (state.mode == EvaluationMode.EVALUATE_ONLY) 
@@ -126,25 +129,60 @@ private fun SummarizeAndEvaluateContent(
     state: SummarizeState,
     viewModel: SummarizeViewModel
 ) {
+    val clipboardManager = LocalClipboardManager.current
+    var copiedInput by remember { mutableStateOf(false) }
+    var copiedResult by remember { mutableStateOf(false) }
+
+    LaunchedEffect(copiedInput) {
+        if (copiedInput) { kotlinx.coroutines.delay(1500); copiedInput = false }
+    }
+    LaunchedEffect(copiedResult) {
+        if (copiedResult) { kotlinx.coroutines.delay(1500); copiedResult = false }
+    }
+
     Column {
-        // Input Text Field - Subtle
-        Text(
-            "Văn bản gốc",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Văn bản gốc",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (state.inputText.isNotEmpty()) {
+                IconButton(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(state.inputText))
+                        copiedInput = true
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        if (copiedInput) Icons.Default.Check else Icons.Default.ContentCopy,
+                        contentDescription = "Copy",
+                        modifier = Modifier.size(16.dp),
+                        tint = if (copiedInput) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
         
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp),
+                .defaultMinSize(minHeight = 200.dp),
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ) {
             BasicTextField(
                 value = state.inputText,
                 onValueChange = { viewModel.onInputTextChange(it) },
+                enabled = !state.isLoading,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(12.dp),
@@ -183,9 +221,9 @@ private fun SummarizeAndEvaluateContent(
             
             var expandedModels by remember { mutableStateOf(false) }
             Surface(
-                onClick = { expandedModels = true },
+                onClick = { if (!state.isLoading) expandedModels = true },
                 shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (state.isLoading) 0.15f else 0.3f)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -221,13 +259,6 @@ private fun SummarizeAndEvaluateContent(
             }
             
             Spacer(modifier = Modifier.weight(1f))
-            
-            // Max Length
-            Text(
-                "Max: ${state.maxLength}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
         
         Spacer(modifier = Modifier.height(12.dp))
@@ -240,6 +271,7 @@ private fun SummarizeAndEvaluateContent(
             Checkbox(
                 checked = state.showEvaluation,
                 onCheckedChange = { viewModel.toggleEvaluation(it) },
+                enabled = !state.isLoading && !state.isEvaluating,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -254,6 +286,7 @@ private fun SummarizeAndEvaluateContent(
                 Checkbox(
                     checked = state.calculateBertScore,
                     onCheckedChange = { viewModel.toggleBertScore(it) },
+                    enabled = !state.isLoading && !state.isEvaluating,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -268,13 +301,52 @@ private fun SummarizeAndEvaluateContent(
         // Reference Text (if evaluation enabled)
         if (state.showEvaluation) {
             Spacer(modifier = Modifier.height(12.dp))
-            
-            Text(
-                "Văn bản tham chiếu",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Văn bản tham chiếu",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Surface(
+                    onClick = { viewModel.generateReference() },
+                    enabled = !state.isLoading && !state.isEvaluating && !state.isGeneratingReference && state.inputText.isNotBlank(),
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (state.isGeneratingReference) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(12.dp),
+                                strokeWidth = 1.5.dp,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                        Text(
+                            if (state.isGeneratingReference) "Đang tạo..." else "Tạo bằng AI",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
             
             Surface(
                 modifier = Modifier
@@ -286,6 +358,7 @@ private fun SummarizeAndEvaluateContent(
                 BasicTextField(
                     value = state.referenceText,
                     onValueChange = { viewModel.onReferenceTextChange(it) },
+                    enabled = !state.isLoading && !state.isEvaluating,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(12.dp),
@@ -310,27 +383,44 @@ private fun SummarizeAndEvaluateContent(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Summarize Button - Subtle
-        Surface(
-            onClick = { viewModel.summarize() },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !state.isLoading && state.inputText.isNotBlank(),
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
-            Row(
-                modifier = Modifier.padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+        if (state.isLoading) {
+            Surface(
+                onClick = { viewModel.cancelSummarize() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.errorContainer
             ) {
-                if (state.isLoading) {
+                Row(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.error
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Đang xử lý...", style = MaterialTheme.typography.bodyMedium)
-                } else {
+                    Text(
+                        "Đang xử lý... Nhấn để hủy",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        } else {
+            Surface(
+                onClick = { viewModel.summarize() },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = state.inputText.isNotBlank(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -413,11 +503,31 @@ private fun SummarizeAndEvaluateContent(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    "${state.inferenceTimeMs.toInt()}ms",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "${state.inferenceTimeMs.toInt()}ms",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                    IconButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(state.summary))
+                            copiedResult = true
+                        },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            if (copiedResult) Icons.Default.Check else Icons.Default.ContentCopy,
+                            contentDescription = "Copy kết quả",
+                            modifier = Modifier.size(16.dp),
+                            tint = if (copiedResult) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -476,13 +586,14 @@ private fun EvaluateOnlyContent(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(110.dp),
+                .height(150.dp),
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ) {
             BasicTextField(
                 value = state.candidateText,
                 onValueChange = { viewModel.onCandidateTextChange(it) },
+                enabled = !state.isEvaluating,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(12.dp),
@@ -517,13 +628,14 @@ private fun EvaluateOnlyContent(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(110.dp),
+                .height(150.dp),
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ) {
             BasicTextField(
                 value = state.referenceText,
                 onValueChange = { viewModel.onReferenceTextChange(it) },
+                enabled = !state.isEvaluating,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(12.dp),
@@ -555,6 +667,7 @@ private fun EvaluateOnlyContent(
             Checkbox(
                 checked = state.calculateBertScore,
                 onCheckedChange = { viewModel.toggleBertScore(it) },
+                enabled = !state.isEvaluating,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -567,27 +680,44 @@ private fun EvaluateOnlyContent(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Evaluate Button
-        Surface(
-            onClick = { viewModel.evaluateOnly() },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !state.isEvaluating && state.candidateText.isNotBlank() && state.referenceText.isNotBlank(),
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
-            Row(
-                modifier = Modifier.padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+        if (state.isEvaluating) {
+            Surface(
+                onClick = { viewModel.cancelEvaluate() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.errorContainer
             ) {
-                if (state.isEvaluating) {
+                Row(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.error
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Đang đánh giá...", style = MaterialTheme.typography.bodyMedium)
-                } else {
+                    Text(
+                        "Đang đánh giá... Nhấn để hủy",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        } else {
+            Surface(
+                onClick = { viewModel.evaluateOnly() },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = state.candidateText.isNotBlank() && state.referenceText.isNotBlank(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(Icons.Default.Assessment, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
