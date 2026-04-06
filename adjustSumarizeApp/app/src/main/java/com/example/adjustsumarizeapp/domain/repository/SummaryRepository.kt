@@ -59,4 +59,9 @@ interface SummaryRepository {
     suspend fun getHistoryCount(): Int
     
     suspend fun getHistoryCountByModel(model: String): Int
+    
+    // Analytics & Admin
+    suspend fun getAnalytics(): Result<AnalyticsResponseDto>
+    
+    suspend fun getAdminUsers(): Result<List<UserPublicDto>>
 }

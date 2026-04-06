@@ -24,6 +24,7 @@ data class UserDto(
             id = id,
             email = email,
             name = fullName ?: email.substringBefore("@"),
+            role = role,  // Map role from API
             token = token
         )
     }

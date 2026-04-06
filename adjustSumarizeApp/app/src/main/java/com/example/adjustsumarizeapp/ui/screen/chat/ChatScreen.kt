@@ -147,21 +147,21 @@ fun ChatScreen(
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(listOf("vit5", "phobert_vit5", "qwen")) { model ->
+                                items(state.availableModels) { modelInfo ->
                                     FilterChip(
-                                        selected = state.selectedModel == model,
+                                        selected = state.selectedModel == modelInfo.id,
                                         onClick = { 
-                                            viewModel.onModelSelect(model)
+                                            viewModel.onModelSelect(modelInfo.id)
                                             viewModel.toggleModelPicker()
                                         },
                                         label = { 
                                             Text(
-                                                model.uppercase(),
+                                                modelInfo.name,
                                                 style = MaterialTheme.typography.labelMedium
                                             ) 
                                         },
                                         leadingIcon = {
-                                            if (state.selectedModel == model) {
+                                            if (state.selectedModel == modelInfo.id) {
                                                 Icon(
                                                     Icons.Default.CheckCircle, 
                                                     "Selected", 

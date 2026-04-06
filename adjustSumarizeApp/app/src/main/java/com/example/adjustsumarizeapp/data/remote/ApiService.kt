@@ -100,5 +100,29 @@ interface ApiService {
     suspend fun getHistoryItem(
         @Path("history_id") historyId: String
     ): Response<HistoryItemDto>
+    
+    // ==================== Analytics Endpoints ====================
+    
+    /**
+     * Get analytics data (admin sees all consented users, user sees own)
+     */
+    @GET("history/analytics")
+    suspend fun getAnalytics(): Response<AnalyticsResponseDto>
+    
+    // ==================== Admin Endpoints ====================
+    
+    /**
+     * Get all users (admin only)
+     */
+    @GET("admin/users")
+    suspend fun getAdminUsers(): Response<List<UserPublicDto>>
+    
+    /**
+     * Delete user (admin only)
+     */
+    @DELETE("admin/users/{user_id}")
+    suspend fun deleteUser(
+        @Path("user_id") userId: String
+    ): Response<Unit>
 }
 

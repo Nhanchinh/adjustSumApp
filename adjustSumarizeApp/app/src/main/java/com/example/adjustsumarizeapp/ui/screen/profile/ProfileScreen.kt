@@ -27,6 +27,12 @@ fun ProfileScreen(
     val state by viewModel.state.collectAsState()
     val scrollState = rememberScrollState()
     
+    // Load user data khi screen mở
+    LaunchedEffect(Unit) {
+        // Force reload user info from API
+        viewModel.loadCurrentUser()
+    }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -64,6 +70,19 @@ fun ProfileScreen(
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Role Badge
+            val currentUser = state.currentUser
+            if (currentUser != null) {
+                com.example.adjustsumarizeapp.ui.components.RoleBadge(
+                    role = currentUser.role
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(4.dp))
             
             Text(
                 text = "Người dùng",

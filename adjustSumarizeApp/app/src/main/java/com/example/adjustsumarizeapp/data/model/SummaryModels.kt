@@ -31,9 +31,15 @@ data class SummarizeRequest(
 )
 
 /**
- * Summarize Response
+ * Summarize Response - khớp với backend SummarizeResponse
  */
 data class SummarizeResponse(
+    @SerializedName("original_text")
+    val originalText: String = "",
+    
+    @SerializedName("preprocessed_text")
+    val preprocessedText: String = "",
+    
     @SerializedName("summary")
     val summary: String,
     
@@ -41,16 +47,19 @@ data class SummarizeResponse(
     val modelUsed: String,
     
     @SerializedName("colab_inference_ms")
-    val colabInferenceMs: Double,  // Changed from Int to Double
+    val colabInferenceMs: Double,
+    
+    @SerializedName("colab_inference_s")
+    val colabInferenceS: Double = 0.0,
     
     @SerializedName("total_processing_ms")
-    val totalProcessingMs: Double,  // Changed from Int to Double
+    val totalProcessingMs: Double,
     
-    @SerializedName("input_length")
-    val inputLength: Int,
+    @SerializedName("total_processing_s")
+    val totalProcessingS: Double = 0.0,
     
-    @SerializedName("output_length")
-    val outputLength: Int
+    @SerializedName("metadata")
+    val metadata: Map<String, Any>? = null
 )
 
 /**
@@ -135,16 +144,50 @@ data class HistoryMetrics(
 )
 
 /**
+ * Feedback response from backend
+ */
+data class FeedbackResponse(
+    @SerializedName("rating")
+    val rating: String,  // "good", "bad", "neutral"
+    
+    @SerializedName("comment")
+    val comment: String?,
+    
+    @SerializedName("corrected_summary")
+    val correctedSummary: String?,
+    
+    @SerializedName("feedback_at")
+    val feedbackAt: String?,
+    
+    @SerializedName("human_eval")
+    val humanEval: HumanEvalScores?
+)
+
+/**
+ * Human evaluation scores (1-5)
+ */
+data class HumanEvalScores(
+    @SerializedName("fluency")
+    val fluency: Int?,
+    
+    @SerializedName("coherence")
+    val coherence: Int?,
+    
+    @SerializedName("relevance")
+    val relevance: Int?,
+    
+    @SerializedName("consistency")
+    val consistency: Int?
+)
+
+/**
  * History Item from API
  */
 data class HistoryItemDto(
     @SerializedName("id")
     val id: String,
     
-    @SerializedName("user_id")
-    val userId: String?,  // Nullable - backend không trả về trong list
-    
-    @SerializedName("input_text")  // FIXED: Backend dùng "input_text" không phải "original_text"
+    @SerializedName("input_text")
     val inputText: String,
     
     @SerializedName("summary")
@@ -157,7 +200,10 @@ data class HistoryItemDto(
     val createdAt: String,
     
     @SerializedName("metrics")
-    val metrics: HistoryMetrics  // FIXED: Dùng HistoryMetrics thay vì EvaluationMetrics
+    val metrics: HistoryMetrics,
+    
+    @SerializedName("feedback")
+    val feedback: FeedbackResponse? = null
 )
 
 /**
@@ -174,7 +220,10 @@ data class HistoryResponse(
     val page: Int,
     
     @SerializedName("page_size")
-    val pageSize: Int
+    val pageSize: Int,
+    
+    @SerializedName("total_pages")
+    val totalPages: Int = 1
 )
 
 /**
@@ -208,11 +257,10 @@ data class SaveHistoryRequest(
 
 /**
  * Colab Health Check Response
- * Backend returns: {"status": "connected"|"disconnected", "colab_url": "...", "gpu_available": true|false, "error": "..."}
  */
 data class ColabHealthResponse(
     @SerializedName("status")
-    val status: String,  // "connected" hoặc "disconnected"
+    val status: String,
     
     @SerializedName("colab_url")
     val colabUrl: String?,
@@ -222,4 +270,93 @@ data class ColabHealthResponse(
     
     @SerializedName("error")
     val error: String?
+)
+
+/**
+ * Analytics - Model Stats
+ */
+data class ModelStatsDto(
+    @SerializedName("model")
+    val model: String,
+    
+    @SerializedName("count")
+    val count: Int,
+    
+    @SerializedName("avg_compression_ratio")
+    val avgCompressionRatio: Double,
+    
+    @SerializedName("avg_processing_time_ms")
+    val avgProcessingTimeMs: Double,
+    
+    @SerializedName("good_count")
+    val goodCount: Int,
+    
+    @SerializedName("bad_count")
+    val badCount: Int,
+    
+    @SerializedName("neutral_count")
+    val neutralCount: Int
+)
+
+/**
+ * Analytics - Daily Count
+ */
+data class DailyCountDto(
+    @SerializedName("date")
+    val date: String,
+    
+    @SerializedName("count")
+    val count: Int
+)
+
+/**
+ * Analytics Response from GET /history/analytics
+ */
+data class AnalyticsResponseDto(
+    @SerializedName("total_summaries")
+    val totalSummaries: Int,
+    
+    @SerializedName("total_with_feedback")
+    val totalWithFeedback: Int,
+    
+    @SerializedName("feedback_rate")
+    val feedbackRate: Double,
+    
+    @SerializedName("rating_distribution")
+    val ratingDistribution: Map<String, Int>,
+    
+    @SerializedName("model_distribution")
+    val modelDistribution: Map<String, Int>,
+    
+    @SerializedName("model_stats")
+    val modelStats: List<ModelStatsDto>,
+    
+    @SerializedName("daily_counts")
+    val dailyCounts: List<DailyCountDto>,
+    
+    @SerializedName("avg_compression_ratio")
+    val avgCompressionRatio: Double,
+    
+    @SerializedName("avg_processing_time_ms")
+    val avgProcessingTimeMs: Double
+)
+
+/**
+ * Admin - User Public info
+ */
+data class UserPublicDto(
+    @SerializedName("id")
+    val id: String,
+    
+    @SerializedName("email")
+    val email: String,
+    
+    @SerializedName("full_name")
+    val fullName: String?,
+    
+    @SerializedName("role")
+    val role: String,
+    
+    @SerializedName("consent_share_data")
+    val consentShareData: Boolean = true
 )

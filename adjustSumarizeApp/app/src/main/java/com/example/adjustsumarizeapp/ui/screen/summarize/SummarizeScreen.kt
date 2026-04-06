@@ -208,11 +208,11 @@ private fun SummarizeAndEvaluateContent(
                     expanded = expandedModels,
                     onDismissRequest = { expandedModels = false }
                 ) {
-                    listOf("vit5", "phobert_vit5", "qwen").forEach { model ->
+                    state.availableModels.forEach { modelInfo ->
                         DropdownMenuItem(
-                            text = { Text(model.uppercase()) },
+                            text = { Text(modelInfo.name) },
                             onClick = {
-                                viewModel.onModelSelect(model)
+                                viewModel.onModelSelect(modelInfo.id)
                                 expandedModels = false
                             }
                         )

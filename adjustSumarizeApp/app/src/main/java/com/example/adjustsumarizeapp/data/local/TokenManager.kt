@@ -73,11 +73,12 @@ class TokenManager @Inject constructor(
     /**
      * Save user information
      */
-    fun saveUserInfo(userId: String, email: String, name: String) {
+    fun saveUserInfo(userId: String, email: String, name: String, role: String = "user") {
         sharedPreferences.edit()
             .putString(Constants.KEY_USER_ID, userId)
             .putString(Constants.KEY_USER_EMAIL, email)
             .putString(Constants.KEY_USER_NAME, name)
+            .putString(Constants.KEY_USER_ROLE, role)  // ✅ SAVE ROLE
             .apply()
     }
 
@@ -100,6 +101,13 @@ class TokenManager @Inject constructor(
      */
     fun getUserName(): String? {
         return sharedPreferences.getString(Constants.KEY_USER_NAME, null)
+    }
+
+    /**
+     * Get user role
+     */
+    fun getUserRole(): String {
+        return sharedPreferences.getString(Constants.KEY_USER_ROLE, "user") ?: "user"
     }
 
     /**

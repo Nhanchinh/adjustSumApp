@@ -23,19 +23,21 @@ class HomeViewModel @Inject constructor(
     val state: StateFlow<HomeState> = _state.asStateFlow()
     
     init {
-        // Try to load user info from saved state or repository
-        savedStateHandle.get<String>("userName")?.let { name ->
-            _state.value = _state.value.copy(userName = name)
-        } ?: loadCurrentUser()
+        // ALWAYS load current user to get role info
+        loadCurrentUser()
         
         // Auto-check Colab connection on startup
         checkColabConnection()
     }
     
-    private fun loadCurrentUser() {
+    
+    fun loadCurrentUser() {
         viewModelScope.launch {
             userRepository.getCurrentUser().onSuccess { user ->
-                _state.value = _state.value.copy(userName = user.name)
+                _state.value = _state.value.copy(
+                    userName = user.name,
+                    currentUser = user  // Store full user object
+                )
             }
         }
     }

@@ -41,7 +41,8 @@ class UserRepositoryImpl @Inject constructor(
                 tokenManager.saveUserInfo(
                     userId = user.id,
                     email = user.email,
-                    name = user.name
+                    name = user.name,
+                    role = user.role  // ✅ SAVE ROLE
                 )
                 
                 Result.success(user)
@@ -83,7 +84,8 @@ class UserRepositoryImpl @Inject constructor(
                 tokenManager.saveUserInfo(
                     userId = user.id,
                     email = user.email,
-                    name = user.name
+                    name = user.name,
+                    role = user.role  // ✅ SAVE ROLE
                 )
                 
                 Result.success(user)

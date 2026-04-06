@@ -4,7 +4,7 @@ object Constants {
     // API Configuration
     // Use 10.0.2.2 for Android emulator to access localhost
     // Use your actual IP address for physical device (e.g., "http://192.168.1.100:8000/")
-    const val BASE_URL = "http://192.168.30.101:8000/"
+    const val BASE_URL = "http://192.168.30.103:8000/"
     
     // API Endpoints
     const val LOGIN_ENDPOINT = "auth/login"
@@ -22,6 +22,7 @@ object Constants {
     const val KEY_USER_ID = "user_id"
     const val KEY_USER_EMAIL = "user_email"
     const val KEY_USER_NAME = "user_name"
+    const val KEY_USER_ROLE = "user_role"  // ✅ THÊM
     
     // Timeouts (in seconds)
     const val CONNECT_TIMEOUT = 30L

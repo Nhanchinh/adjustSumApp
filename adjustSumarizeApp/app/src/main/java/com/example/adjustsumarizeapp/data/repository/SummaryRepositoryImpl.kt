@@ -272,6 +272,34 @@ class SummaryRepositoryImpl @Inject constructor(
         return summaryHistoryDao.getCountByModel(model)
     }
     
+    // ==================== Analytics & Admin ====================
+    
+    override suspend fun getAnalytics(): Result<AnalyticsResponseDto> {
+        return try {
+            val response = apiService.getAnalytics()
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Không thể tải analytics: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    override suspend fun getAdminUsers(): Result<List<UserPublicDto>> {
+        return try {
+            val response = apiService.getAdminUsers()
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Không thể tải danh sách users: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     // ==================== Helper Functions ====================
     
     private fun parseIsoDate(isoDate: String): Long {

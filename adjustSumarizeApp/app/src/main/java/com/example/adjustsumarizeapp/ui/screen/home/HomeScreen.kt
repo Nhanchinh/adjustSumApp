@@ -28,7 +28,7 @@ import com.example.adjustsumarizeapp.ui.screen.history.HistoryViewModel
 import kotlinx.coroutines.launch
 
 enum class Screen {
-    CHAT, EVALUATE, HISTORY, PROFILE
+    CHAT, EVALUATE, HISTORY, PROFILE, ADMIN_OVERVIEW
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,6 +147,63 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Đánh giá tóm tắt", fontWeight = FontWeight.SemiBold)
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Admin Section (Only for admin users)
+                if (state.currentUser?.role == "admin") {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    )
+                    
+                    // Admin Label
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Shield,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color(0xFFFFA726)
+                        )
+                        Text(
+                            "ADMIN",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFA726)
+                        )
+                    }
+                    
+                    // Admin Overview Button
+                    FilledTonalButton(
+                        onClick = {
+                            currentScreen = Screen.ADMIN_OVERVIEW
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = Color(0xFFFFA726).copy(alpha = 0.15f),
+                            contentColor = Color(0xFFFFA726)
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Dashboard,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Tổng quan Admin", fontWeight = FontWeight.SemiBold)
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -379,6 +436,7 @@ fun HomeScreen(
                                 Screen.EVALUATE -> "Đánh giá"
                                 Screen.HISTORY -> "Lịch sử"
                                 Screen.PROFILE -> "Hồ sơ"
+                                Screen.ADMIN_OVERVIEW -> "Admin"
                             },
                             fontWeight = FontWeight.Bold
                         )
@@ -416,6 +474,7 @@ fun HomeScreen(
                     Screen.PROFILE -> com.example.adjustsumarizeapp.ui.screen.profile.ProfileScreen(
                         onLogout = onLogout
                     )
+                    Screen.ADMIN_OVERVIEW -> com.example.adjustsumarizeapp.ui.screen.admin.AdminOverviewScreen()
                 }
             }
         }
