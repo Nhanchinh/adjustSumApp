@@ -11,7 +11,7 @@ data class SummarizeState(
     
     // Summarize mode inputs
     val inputText: String = "",
-    val selectedModel: String = "phobert_vit5",
+    val selectedModel: String = "vit5_fin",
     val maxLength: Int = 256,
     val availableModels: List<ModelInfo> = emptyList(),
     
