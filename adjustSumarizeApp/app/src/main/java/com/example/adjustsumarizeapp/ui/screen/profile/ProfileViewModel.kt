@@ -21,6 +21,9 @@ data class ProfileState(
     val topModel: String = "-",
     val isLoading: Boolean = false,
     val isUpdatingConsent: Boolean = false,
+    val isUpdatingProfile: Boolean = false,
+    val isChangingPassword: Boolean = false,
+    val successMessage: String? = null,
     val error: String? = null
 )
 
@@ -96,7 +99,75 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun updateProfileName(fullName: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isUpdatingProfile = true, error = null, successMessage = null) }
+
+            summaryRepository.updateSettings(fullName = fullName.trim()).onSuccess { userPublic ->
+                _state.update {
+                    it.copy(
+                        userName = userPublic.fullName?.ifBlank { it.userName } ?: it.userName,
+                        isUpdatingProfile = false,
+                        successMessage = "Cập nhật thông tin tài khoản thành công"
+                    )
+                }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isUpdatingProfile = false,
+                        error = e.message ?: "Không thể cập nhật thông tin tài khoản"
+                    )
+                }
+            }
+        }
+    }
+
+    fun changePassword(currentPassword: String, newPassword: String, confirmPassword: String) {
+        val current = currentPassword.trim()
+        val next = newPassword.trim()
+        val confirm = confirmPassword.trim()
+
+        if (current.length < 6 || next.length < 6) {
+            _state.update { it.copy(error = "Mật khẩu phải có ít nhất 6 ký tự") }
+            return
+        }
+
+        if (next != confirm) {
+            _state.update { it.copy(error = "Mật khẩu xác nhận không khớp") }
+            return
+        }
+
+        if (current == next) {
+            _state.update { it.copy(error = "Mật khẩu mới phải khác mật khẩu hiện tại") }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isChangingPassword = true, error = null, successMessage = null) }
+
+            userRepository.changePassword(currentPassword = current, newPassword = next).onSuccess {
+                _state.update {
+                    it.copy(
+                        isChangingPassword = false,
+                        successMessage = "Đổi mật khẩu thành công"
+                    )
+                }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isChangingPassword = false,
+                        error = e.message ?: "Không thể đổi mật khẩu"
+                    )
+                }
+            }
+        }
+    }
+
     fun clearError() {
         _state.update { it.copy(error = null) }
+    }
+
+    fun clearSuccess() {
+        _state.update { it.copy(successMessage = null) }
     }
 }

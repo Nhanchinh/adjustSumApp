@@ -1,6 +1,7 @@
 package com.example.adjustsumarizeapp.data.repository
 
 import com.example.adjustsumarizeapp.data.local.TokenManager
+import com.example.adjustsumarizeapp.data.model.ChangePasswordRequestDto
 import com.example.adjustsumarizeapp.data.remote.ApiService
 import com.example.adjustsumarizeapp.domain.model.User
 import javax.inject.Inject
@@ -10,6 +11,7 @@ interface UserRepository {
     suspend fun login(email: String, password: String): Result<User>
     suspend fun logout(): Result<Unit>
     suspend fun getCurrentUser(): Result<User>
+    suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
     fun isLoggedIn(): Boolean
 }
 
@@ -94,6 +96,30 @@ class UserRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> {
+        return try {
+            val response = apiService.changePassword(
+                ChangePasswordRequestDto(
+                    currentPassword = currentPassword,
+                    newPassword = newPassword
+                )
+            )
+
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                val errorMessage = try {
+                    response.errorBody()?.string() ?: "Không thể đổi mật khẩu"
+                } catch (e: Exception) {
+                    "Không thể đổi mật khẩu"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Network error: ${e.message}"))
         }
     }
     

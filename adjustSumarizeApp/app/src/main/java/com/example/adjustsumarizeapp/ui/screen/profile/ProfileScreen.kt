@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -24,11 +25,20 @@ fun ProfileScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val scrollState = rememberScrollState()
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.error) {
         if (state.error != null) {
             kotlinx.coroutines.delay(3000)
             viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(state.successMessage) {
+        if (state.successMessage != null) {
+            kotlinx.coroutines.delay(2500)
+            viewModel.clearSuccess()
         }
     }
 
@@ -142,6 +152,36 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         )
 
+        // Account management
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = "Tài khoản",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+
+            ActionItem(
+                icon = Icons.Default.Edit,
+                title = "Cập nhật thông tin tài khoản",
+                subtitle = "Thay đổi tên hiển thị của bạn",
+                onClick = { showEditProfileDialog = true }
+            )
+
+            ActionItem(
+                icon = Icons.Default.Lock,
+                title = "Đổi mật khẩu",
+                subtitle = "Cập nhật mật khẩu đăng nhập",
+                onClick = { showChangePasswordDialog = true }
+            )
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
+
         // Privacy Section (only for regular users)
         if (state.role != "admin")
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -208,6 +248,15 @@ fun ProfileScreen(
             )
         }
 
+        if (state.successMessage != null) {
+            Text(
+                text = state.successMessage!!,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp)
+            )
+        }
+
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
@@ -221,7 +270,7 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Ứng dụng tóm tắt văn bản",
+                text = "Ứng dụng đánh giá chất lượng tóm tắt",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
@@ -232,6 +281,29 @@ fun ProfileScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+
+    if (showEditProfileDialog) {
+        EditProfileDialog(
+            initialName = state.userName,
+            isSaving = state.isUpdatingProfile,
+            onDismiss = { showEditProfileDialog = false },
+            onSave = { fullName ->
+                viewModel.updateProfileName(fullName)
+                showEditProfileDialog = false
+            }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            isSaving = state.isChangingPassword,
+            onDismiss = { showChangePasswordDialog = false },
+            onSave = { current, newPassword, confirm ->
+                viewModel.changePassword(current, newPassword, confirm)
+                showChangePasswordDialog = false
+            }
+        )
     }
 }
 
@@ -275,4 +347,152 @@ private fun StatItem(
             )
         }
     }
+}
+
+@Composable
+private fun ActionItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Transparent,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditProfileDialog(
+    initialName: String,
+    isSaving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var fullName by remember(initialName) { mutableStateOf(initialName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cập nhật thông tin tài khoản") },
+        text = {
+            OutlinedTextField(
+                value = fullName,
+                onValueChange = { fullName = it },
+                label = { Text("Họ và tên") },
+                singleLine = true,
+                enabled = !isSaving,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text("Hủy")
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(fullName) },
+                enabled = fullName.isNotBlank() && !isSaving
+            ) {
+                Text(if (isSaving) "Đang lưu..." else "Lưu")
+            }
+        }
+    )
+}
+
+@Composable
+private fun ChangePasswordDialog(
+    isSaving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String) -> Unit
+) {
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Đổi mật khẩu") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = { Text("Mật khẩu hiện tại") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("Mật khẩu mới") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Xác nhận mật khẩu mới") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text("Hủy")
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(currentPassword, newPassword, confirmPassword) },
+                enabled = currentPassword.isNotBlank() &&
+                    newPassword.isNotBlank() &&
+                    confirmPassword.isNotBlank() &&
+                    !isSaving
+            ) {
+                Text(if (isSaving) "Đang đổi..." else "Cập nhật")
+            }
+        }
+    )
 }

@@ -78,3 +78,14 @@ data class RefreshTokenResponse(
     @SerializedName("token_type")
     val tokenType: String = "bearer"
 )
+
+/**
+ * Change password request
+ */
+data class ChangePasswordRequestDto(
+    @SerializedName("current_password")
+    val currentPassword: String,
+
+    @SerializedName("new_password")
+    val newPassword: String
+)

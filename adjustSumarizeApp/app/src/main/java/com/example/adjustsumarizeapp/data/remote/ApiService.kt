@@ -41,6 +41,14 @@ interface ApiService {
     suspend fun updateSettings(
         @Body request: UpdateSettingsRequest
     ): Response<UserPublicDto>
+
+    /**
+     * Change current user password
+     */
+    @POST("auth/change-password")
+    suspend fun changePassword(
+        @Body request: ChangePasswordRequestDto
+    ): Response<Map<String, String>>
     
     // ==================== Summarization Endpoints ====================
     
