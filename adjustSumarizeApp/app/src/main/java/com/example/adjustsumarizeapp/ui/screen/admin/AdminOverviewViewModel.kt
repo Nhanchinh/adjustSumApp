@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.adjustsumarizeapp.data.model.AnalyticsResponseDto
 import com.example.adjustsumarizeapp.data.model.ColabHealthResponse
 import com.example.adjustsumarizeapp.data.model.ModelStatsDto
+import com.example.adjustsumarizeapp.data.model.UserPublicDto
 import com.example.adjustsumarizeapp.domain.repository.SummaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ data class AdminOverviewState(
     val colabStatus: String = "unknown",
     val gpuAvailable: Boolean? = null,
     val colabUrl: String? = null,
+    val users: List<UserPublicDto> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -68,7 +70,10 @@ class AdminOverviewViewModel @Inject constructor(
                 }
                 
                 usersResult.onSuccess { users ->
-                    _state.value = _state.value.copy(totalUsers = users.size)
+                    _state.value = _state.value.copy(
+                        totalUsers = users.size,
+                        users = users
+                    )
                 }
                 
                 healthResult.onSuccess { health ->
@@ -93,3 +98,4 @@ class AdminOverviewViewModel @Inject constructor(
         loadOverview()
     }
 }
+
