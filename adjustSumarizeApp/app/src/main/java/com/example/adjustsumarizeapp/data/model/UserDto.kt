@@ -89,3 +89,18 @@ data class ChangePasswordRequestDto(
     @SerializedName("new_password")
     val newPassword: String
 )
+
+/**
+ * Register Request for POST /auth/register
+ */
+data class RegisterRequest(
+    @SerializedName("email")
+    val email: String,
+
+    @SerializedName("password")
+    val password: String,
+
+    @SerializedName("full_name")
+    val fullName: String? = null
+)
+

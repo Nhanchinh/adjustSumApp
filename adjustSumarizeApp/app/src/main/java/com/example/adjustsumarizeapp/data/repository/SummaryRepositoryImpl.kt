@@ -1,5 +1,6 @@
 package com.example.adjustsumarizeapp.data.repository
 
+import android.util.Log
 import com.example.adjustsumarizeapp.data.local.TokenManager
 import com.example.adjustsumarizeapp.data.local.dao.SummaryHistoryDao
 import com.example.adjustsumarizeapp.data.local.entity.SummaryHistoryEntity
@@ -7,6 +8,9 @@ import com.example.adjustsumarizeapp.data.model.*
 import com.example.adjustsumarizeapp.data.remote.ApiService
 import com.example.adjustsumarizeapp.domain.repository.SummaryRepository
 import kotlinx.coroutines.flow.Flow
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 import javax.inject.Inject
 
@@ -190,66 +194,98 @@ class SummaryRepositoryImpl @Inject constructor(
             // 1. Get current user ID
             val currentUserId = tokenManager.getUserId() ?: return Result.failure(Exception("User not logged in"))
             
-            // 2. Get remote history
-            val remoteResult = getRemoteHistory(1, 100)
-            
-            if (remoteResult.isSuccess) {
-                val remoteHistory = remoteResult.getOrNull()?.items ?: emptyList()
-                
-                // 3. Convert to local entities and save
-                val localEntities = remoteHistory.map { dto ->
-                    SummaryHistoryEntity(
-                        id = dto.id,
-                        userId = currentUserId,  // FIXED: Use current user ID instead of null from API
-                        originalText = dto.inputText,
-                        summary = dto.summary,
-                        modelUsed = dto.modelUsed,
-                        inferenceTimeMs = dto.metrics.colabInferenceMs,
-                        createdAt = parseIsoDate(dto.createdAt),
-                        rouge1 = null,  // History metrics doesn't have evaluation metrics
-                        rouge2 = null,
-                        rougeL = null,
-                        bleu = null,
-                        bertScore = null,
-                        synced = true,
-                        modifiedAt = System.currentTimeMillis()
+            // 2. Upload unsynced local items FIRST (before pulling remote)
+            val unsyncedItems = summaryHistoryDao.getUnsyncedHistory()
+            Log.d("SyncHistory", "Found ${unsyncedItems.size} unsynced items to push")
+            unsyncedItems.forEach { local ->
+                val metrics = if (local.rouge1 != null) {
+                    EvaluationMetrics(
+                        rouge1 = local.rouge1,
+                        rouge2 = local.rouge2 ?: 0.0,
+                        rougeL = local.rougeL ?: 0.0,
+                        bleu = local.bleu ?: 0.0,
+                        bertScore = local.bertScore,
+                        processingTimeMs = 0
                     )
+                } else null
+                
+                val saveResult = saveRemoteHistory(
+                    originalText = local.originalText,
+                    summary = local.summary,
+                    modelUsed = local.modelUsed,
+                    inferenceTimeMs = local.inferenceTimeMs,
+                    metrics = metrics
+                )
+                
+                // Delete local item regardless of success/failure:
+                // - Success: remote now has it with a real MongoDB ID, pull will re-create it
+                // - Failure (422 etc.): stale data with invalid model, no point keeping it
+                summaryHistoryDao.deleteById(local.id)
+                if (saveResult.isFailure) {
+                    Log.w("SyncHistory", "Failed to push item ${local.id} (model=${local.modelUsed}), removed stale local data: ${saveResult.exceptionOrNull()?.message}")
                 }
-                
-                summaryHistoryDao.insertAll(localEntities)
-                
-                // 4. Upload unsynced local items
-                val unsyncedItems = summaryHistoryDao.getUnsyncedHistory()
-                unsyncedItems.forEach { local ->
-                    val metrics = if (local.rouge1 != null) {
-                        EvaluationMetrics(
-                            rouge1 = local.rouge1,
-                            rouge2 = local.rouge2 ?: 0.0,
-                            rougeL = local.rougeL ?: 0.0,
-                            bleu = local.bleu ?: 0.0,
-                            bertScore = local.bertScore,
-                            processingTimeMs = 0
-                        )
-                    } else null
-                    
-                    val saveResult = saveRemoteHistory(
-                        originalText = local.originalText,
-                        summary = local.summary,
-                        modelUsed = local.modelUsed,
-                        inferenceTimeMs = local.inferenceTimeMs,
-                        metrics = metrics
-                    )
-                    
-                    if (saveResult.isSuccess) {
-                        summaryHistoryDao.markAsSynced(local.id)
-                    }
-                }
-                
-                Result.success(Unit)
-            } else {
-                Result.failure(remoteResult.exceptionOrNull() ?: Exception("Sync failed"))
             }
+            
+            // 3. Fetch ALL remote history (handle pagination)
+            val allRemoteItems = mutableListOf<HistoryItemDto>()
+            var currentPage = 1
+            val pageSize = 100
+            
+            while (true) {
+                val remoteResult = getRemoteHistory(currentPage, pageSize)
+                if (remoteResult.isFailure) {
+                    return Result.failure(remoteResult.exceptionOrNull() ?: Exception("Sync failed"))
+                }
+                
+                val response = remoteResult.getOrNull() ?: break
+                allRemoteItems.addAll(response.items)
+                
+                // Check if there are more pages
+                if (currentPage >= response.totalPages || response.items.isEmpty()) {
+                    break
+                }
+                currentPage++
+            }
+            
+            Log.d("SyncHistory", "Fetched ${allRemoteItems.size} items from server")
+            
+            // 4. Convert remote items to local entities and save
+            val localEntities = allRemoteItems.map { dto ->
+                SummaryHistoryEntity(
+                    id = dto.id,
+                    userId = currentUserId,
+                    originalText = dto.inputText,
+                    summary = dto.summary,
+                    modelUsed = dto.modelUsed,
+                    inferenceTimeMs = dto.metrics.colabInferenceMs,
+                    createdAt = parseIsoDate(dto.createdAt),
+                    rouge1 = null,
+                    rouge2 = null,
+                    rougeL = null,
+                    bleu = null,
+                    bertScore = null,
+                    synced = true,
+                    modifiedAt = System.currentTimeMillis()
+                )
+            }
+            
+            summaryHistoryDao.insertAll(localEntities)
+            
+            // 5. CLEANUP: Delete local synced items that no longer exist on server
+            //    (e.g., deleted via web or other clients)
+            val remoteIds = allRemoteItems.map { it.id }
+            if (remoteIds.isNotEmpty()) {
+                summaryHistoryDao.deleteSyncedNotIn(currentUserId, remoteIds)
+            } else {
+                // Server has 0 records → delete all synced local items
+                summaryHistoryDao.deleteAllSyncedByUser(currentUserId)
+            }
+            
+            Log.d("SyncHistory", "Sync complete. Remote: ${allRemoteItems.size} items")
+            
+            Result.success(Unit)
         } catch (e: Exception) {
+            Log.e("SyncHistory", "Sync failed", e)
             Result.failure(e)
         }
     }
@@ -335,13 +371,38 @@ class SummaryRepositoryImpl @Inject constructor(
 
     // ==================== Helper Functions ====================
     
+    /**
+     * Parse ISO 8601 date string from backend to epoch milliseconds.
+     * Backend sends dates like: "2026-05-19T10:30:00+07:00" or "2026-05-19T03:30:00"
+     */
     private fun parseIsoDate(isoDate: String): Long {
-        return try {
-            // Simple parsing for ISO 8601 format
-            // In production, use a proper date parser like kotlinx-datetime
-            System.currentTimeMillis()
-        } catch (e: Exception) {
-            System.currentTimeMillis()
+        // Try multiple ISO 8601 formats the backend might send
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX",   // 2026-05-19T10:30:00.123456+07:00
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",      // 2026-05-19T10:30:00.123+07:00
+            "yyyy-MM-dd'T'HH:mm:ssXXX",          // 2026-05-19T10:30:00+07:00
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",      // 2026-05-19T10:30:00.123456 (no TZ)
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",         // 2026-05-19T10:30:00.123 (no TZ)
+            "yyyy-MM-dd'T'HH:mm:ss"              // 2026-05-19T10:30:00 (no TZ)
+        )
+        
+        for (format in formats) {
+            try {
+                val sdf = SimpleDateFormat(format, Locale.US)
+                // If the format doesn't include timezone info, assume UTC+7 (Vietnam)
+                if (!format.contains("X")) {
+                    sdf.timeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh")
+                }
+                val date = sdf.parse(isoDate)
+                if (date != null) {
+                    return date.time
+                }
+            } catch (_: Exception) {
+                // Try next format
+            }
         }
+        
+        Log.w("SyncHistory", "Failed to parse date: $isoDate, using current time")
+        return System.currentTimeMillis()
     }
 }

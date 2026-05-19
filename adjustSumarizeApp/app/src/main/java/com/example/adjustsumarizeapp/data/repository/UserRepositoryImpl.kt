@@ -2,6 +2,7 @@ package com.example.adjustsumarizeapp.data.repository
 
 import com.example.adjustsumarizeapp.data.local.TokenManager
 import com.example.adjustsumarizeapp.data.model.ChangePasswordRequestDto
+import com.example.adjustsumarizeapp.data.model.RegisterRequest
 import com.example.adjustsumarizeapp.data.remote.ApiService
 import com.example.adjustsumarizeapp.domain.model.User
 import javax.inject.Inject
@@ -9,6 +10,7 @@ import javax.inject.Singleton
 
 interface UserRepository {
     suspend fun login(email: String, password: String): Result<User>
+    suspend fun register(email: String, password: String, fullName: String?): Result<User>
     suspend fun logout(): Result<Unit>
     suspend fun getCurrentUser(): Result<User>
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
@@ -58,6 +60,31 @@ class UserRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(Exception("Network error: ${e.message}"))
+        }
+    }
+    
+    override suspend fun register(email: String, password: String, fullName: String?): Result<User> {
+        return try {
+            val request = RegisterRequest(
+                email = email,
+                password = password,
+                fullName = fullName
+            )
+            val response = apiService.register(request)
+            
+            if (response.isSuccessful && response.body() != null) {
+                // Registration successful, now auto-login
+                return login(email, password)
+            } else {
+                val errorMessage = try {
+                    response.errorBody()?.string() ?: "Đăng ký thất bại"
+                } catch (e: Exception) {
+                    "Đăng ký thất bại"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Lỗi kết nối: ${e.message}"))
         }
     }
     

@@ -93,4 +93,23 @@ interface SummaryHistoryDao {
      */
     @Query("SELECT * FROM summary_history WHERE original_text LIKE '%' || :query || '%' OR summary LIKE '%' || :query || '%' ORDER BY created_at DESC")
     fun searchHistory(query: String): Flow<List<SummaryHistoryEntity>>
+    
+    /**
+     * Get all synced item IDs for a specific user
+     */
+    @Query("SELECT id FROM summary_history WHERE user_id = :userId AND synced = 1")
+    suspend fun getSyncedIdsByUser(userId: String): List<String>
+    
+    /**
+     * Delete synced items that are NOT in the given remote ID list (ghost data cleanup).
+     * Only deletes items that were previously synced (synced = 1), preserving unsynced local items.
+     */
+    @Query("DELETE FROM summary_history WHERE user_id = :userId AND synced = 1 AND id NOT IN (:remoteIds)")
+    suspend fun deleteSyncedNotIn(userId: String, remoteIds: List<String>)
+    
+    /**
+     * Delete all synced items for a user (used when remote has 0 records)
+     */
+    @Query("DELETE FROM summary_history WHERE user_id = :userId AND synced = 1")
+    suspend fun deleteAllSyncedByUser(userId: String)
 }

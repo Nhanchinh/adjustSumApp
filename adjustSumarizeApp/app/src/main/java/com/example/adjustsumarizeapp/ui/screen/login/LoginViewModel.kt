@@ -3,6 +3,7 @@ package com.example.adjustsumarizeapp.ui.screen.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.adjustsumarizeapp.domain.usecase.LoginUseCase
+import com.example.adjustsumarizeapp.domain.usecase.RegisterUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val loginUseCase: LoginUseCase
+    private val loginUseCase: LoginUseCase,
+    private val registerUseCase: RegisterUseCase
 ) : ViewModel() {
     
     private val _state = MutableStateFlow(LoginState())
@@ -25,6 +27,26 @@ class LoginViewModel @Inject constructor(
     
     fun onPasswordChange(password: String) {
         _state.update { it.copy(password = password, error = null) }
+    }
+    
+    fun onConfirmPasswordChange(confirmPassword: String) {
+        _state.update { it.copy(confirmPassword = confirmPassword, error = null) }
+    }
+    
+    fun onFullNameChange(fullName: String) {
+        _state.update { it.copy(fullName = fullName, error = null) }
+    }
+    
+    fun toggleRegisterMode() {
+        _state.update { 
+            it.copy(
+                isRegisterMode = !it.isRegisterMode,
+                error = null,
+                // Clear register-specific fields when toggling
+                confirmPassword = "",
+                fullName = ""
+            )
+        }
     }
     
     fun onLoginClick() {
@@ -47,6 +69,34 @@ class LoginViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         error = exception.message ?: "Đăng nhập thất bại"
+                    ) 
+                }
+            }
+        }
+    }
+    
+    fun onRegisterClick() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            
+            registerUseCase(
+                email = _state.value.email,
+                password = _state.value.password,
+                confirmPassword = _state.value.confirmPassword,
+                fullName = _state.value.fullName
+            ).onSuccess { user ->
+                _state.update { 
+                    it.copy(
+                        isLoading = false,
+                        isLoginSuccessful = true,  // Auto-login after register
+                        user = user
+                    ) 
+                }
+            }.onFailure { exception ->
+                _state.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Đăng ký thất bại"
                     ) 
                 }
             }

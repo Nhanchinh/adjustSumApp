@@ -19,6 +19,14 @@ interface ApiService {
     ): Response<LoginResponse>
     
     /**
+     * Register new user
+     */
+    @POST("auth/register")
+    suspend fun register(
+        @Body request: RegisterRequest
+    ): Response<UserPublicDto>
+    
+    /**
      * Get current user info
      */
     @GET("auth/me")
